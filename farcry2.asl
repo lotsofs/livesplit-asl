@@ -53,7 +53,7 @@ startup
 	  settings.SetToolTip("mission17", "The order of these missions isn't fixed and is determined by a variety of factors");
 	  settings.SetToolTip("mission18", "The order of these missions isn't fixed and is determined by a variety of factors");
 	  settings.SetToolTip("mission19", "The order of these missions isn't fixed and is determined by a variety of factors");
-	  settings.Add("mission22", true, "<Missing Mission Name Diamonds>", "act2");
+	  settings.Add("mission22", true, "Collect the diamonds", "act2");
 	  settings.Add("mission23", true, "Escape the prison", "act2");
 	  settings.Add("mission24", true, "Random order mission 13", "act2");
 	 settings.Add("act3", true, "Act 3", "mainMissions");
