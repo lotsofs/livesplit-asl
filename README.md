@@ -8,4 +8,5 @@
 
 ## Serious Sam 2  
 - Load remover.  .   
-- Works with V2.070.00 and V2.080.00. Other versions can be supported upon request. Contact: twitch.tv/lotsofs
+- Works with V2.070.00 65824, and V2.080.00 252822 and 269486. Other versions can be supported upon request. Contact: twitch.tv/lotsofs
+- In case of a game update on Steam, this will break. Please contact me immediately if this happens and I haven't noticed.
