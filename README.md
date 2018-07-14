@@ -10,3 +10,9 @@
 - Load remover.  .   
 - Works with V2.070.00 65824, and V2.080.00 252822 and 269486. Other versions can be supported upon request. Contact: twitch.tv/lotsofs
 - In case of a game update on Steam, this will break. Please contact me immediately if this happens and I haven't noticed.
+
+## Carmageddon 2
+- Autosplitter
+- Tested with Steam version only
+- In case of a game update on Steam, this might break. Please contact me immediately if this happens and I haven't noticed.
+- Also contact me if you're using this at all. I don't expect anyone to use this.
