@@ -27,9 +27,10 @@ state("FarCry2", "v1.00") {
 	//int isQuickSaving : "FarCry2.exe", 0x115453FC, 0x394; // Not working for some reason, whatever, just don't spam quicksave.
 }
 
-startup
-{
-	settings.Add("mainMissions", true, "Main missions");
+startup {
+	settings.Add("simulatedIGT", true, "Simulate IGT");
+	settings.SetToolTip("simulatedIGT", "Loadless timer will behave like the existing in-game timer, but more accurate. (This adds the intro cutscene time to the timer (477000 ms))");
+	settings.Add("mainMissions", true, "Splits to split (unsupported for v1.03)");
 	 settings.Add("act1", true, "Act 1", "mainMissions");
 	  settings.Add("mission1", true, "Escape the town", "act1");
 	  settings.Add("mission2", true, "Free the captive", "act1");
@@ -134,7 +135,12 @@ gameTime {
 	if (vars.introGameTimeAdded == 0) {
 		vars.introGameTimeAdded = 1; 
 		// add GimeTime from the intro cutscene
-		return TimeSpan.FromMilliseconds(477000);
+		if (settings["simulatedIGT"]) {
+			return TimeSpan.FromMilliseconds(477000);
+		}
+		else {
+			return 0;
+		}
 	}
 }
 
