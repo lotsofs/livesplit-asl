@@ -3,8 +3,7 @@
 /// Legit V1.00 will never work because there is no way of getting past that DRM anymore, to my knowledge. 
 /// If you want me to add support for V1.01 V1.02 or V1.03 or whatever contact me twitch.tv/lotsofs (not sure who I'm writing this for.)
 
-state("FarCry2")
-{
+state("FarCry2") {
 	int version103 : "Dunia.dll", 0xF940F0;
 	int version100 : "Dunia.dll", 0xEE3078;
 }
@@ -75,8 +74,7 @@ startup
 	  settings.Add("missionFinal", true, "Detonate the dynamite/Give the briefcase", "act3");
 }
 
-init
-{
+init {
 	if (current.version103 == 18516) {
 		version = "v1.03";
 	}
@@ -88,17 +86,15 @@ init
 	}
 }
 
+start {
 
-start
-{
 	vars.introGameTimeAdded = 0;
 	if (current.playerControl != 0 && current.missionsPassed == 0 && !current.isLoading && current.sessionTime > 4000 ) {
 		return true;
 	}
 }
 
-split
-{
+split {
 	if (current.isFinished == 1 && current.isFinished != old.isFinished && !current.isLoading && current.missionsPassed > 26){
 		if (settings["missionFinal"]) {
 			return true;
@@ -114,13 +110,11 @@ split
 
 }
 
-isLoading
-{
+isLoading {
 	return current.isLoading;
 }
 
-gameTime
-{
+gameTime {
 	if (vars.introGameTimeAdded == 0) {
 		vars.introGameTimeAdded = 1; 
 		// add GimeTime from the intro cutscene
