@@ -76,13 +76,18 @@ startup
 
 init {
 	if (current.version103 == 18516) {
-		version = "v1.03";
+		version = "v1.03";   
 	}
 	else if (current.version100 == 18516) {
 		version = "v1.00";
 	}
 	else {
-		version = "unrecognized version";
+		if (current.version103 == 0) {
+			throw new Exception("game process not fully initialized yet");
+		}
+		else {
+			version = "unrecognized";
+		}
 	}
 }
 
