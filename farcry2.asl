@@ -30,6 +30,7 @@ state("FarCry2", "v1.00") {
 startup {
 	settings.Add("simulatedIGT", true, "Simulate IGT");
 	settings.SetToolTip("simulatedIGT", "Loadless timer will behave like the existing in-game timer, but more accurate. (This adds the intro cutscene time to the timer (477000 ms))");
+	
 	settings.Add("mainMissions", true, "Splits to split (unsupported for v1.03)");
 	 settings.Add("act1", true, "Act 1", "mainMissions");
 	  settings.Add("mission1", true, "Escape the town", "act1");
