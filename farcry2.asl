@@ -5,6 +5,15 @@
 
 state("FarCry2")
 {
+	int version103 : "Dunia.dll", 0xF940F0;
+	int version100 : "Dunia.dll", 0xEE3078;
+}
+
+state("FarCry2", "v1.03") {
+	
+}
+
+state("FarCry2", "v1.00") {
 	bool isLoading : "Dunia.dll", 0x15833AC;		// Includes tiny loading screen before main loading screen when pressing continue in the main menu
 	//bool isLoading : 0x11589954;		// Full screen loading screens only
 	int isFinished : "Dunia.dll", 0x158660C, 0x84, 0x10;	// Outro cutscene where Reuben Oluwagembi takes pictures
@@ -68,8 +77,15 @@ startup
 
 init
 {
-	int moduleSize = modules.First().ModuleMemorySize;
-	print("test" + moduleSize);			// This gives me the same number regardless of which version I start. Wtf
+	if (current.version103 == 18516) {
+		version = "v1.03";
+	}
+	else if (current.version100 == 18516) {
+		version = "v1.00";
+	}
+	else {
+		version = "unrecognized version";
+	}
 }
 
 
