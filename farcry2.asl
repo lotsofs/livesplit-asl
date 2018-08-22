@@ -1,7 +1,7 @@
 /// Special thanks to Pitpo for helping me test the in-game timer: It's bad, do not use. 
-/// Only works with some V1.00 No CD for now. V1.03 doesn't work yet because I can't be arsed looking for addresses if noone is using that version anyway. 
+/// Only works with some V1.00 No CD for now. V1.03 only works for load removal for now. 
 /// Legit V1.00 will never work because there is no way of getting past that DRM anymore, to my knowledge. 
-/// If you want me to add support for V1.01 V1.02 or V1.03 or whatever contact me twitch.tv/lotsofs (not sure who I'm writing this for.)
+/// If you want me to add support for V1.01 V1.02 or whatever contact me twitch.tv/lotsofs
 
 state("FarCry2") {
 	int version103 : "Dunia.dll", 0xF940F0;
@@ -9,18 +9,22 @@ state("FarCry2") {
 }
 
 state("FarCry2", "v1.03") {
-	
+	bool isLoading : "Dunia.dll", 0x1645C4C;
 }
 
 state("FarCry2", "v1.00") {
 	bool isLoading : "Dunia.dll", 0x15833AC;		// Includes tiny loading screen before main loading screen when pressing continue in the main menu
 	//bool isLoading : 0x11589954;		// Full screen loading screens only
+	
 	int isFinished : "Dunia.dll", 0x158660C, 0x84, 0x10;	// Outro cutscene where Reuben Oluwagembi takes pictures
-		// I don't trust these next addresses
+	
+	// I don't trust these next addresses
 	byte missionsPassed : "Dunia.dll", 0x015824E4, 0x98, 0x8, 0xa4, 0x178;   // Missions passed excluding Buddy rescues
 	int playerControl : "Dunia.dll", 0x0171D218, 0x250;		// Seems to be tied to when the player isn't locked in place (and can walk around). Set to 2 when looking up.
 	int sessionTime : "Dunia.dll", 0x015A4774, 0x4, 0xc, 0x0, 0x50;    // Accurate enough to not start the timer 2 minutes early.
-	int isQuickSaving : "FarCry2.exe", 0x115453FC, 0x394; // Not working for some reason, whatever, just don't spam quicksave.
+	
+	// Unused
+	//int isQuickSaving : "FarCry2.exe", 0x115453FC, 0x394; // Not working for some reason, whatever, just don't spam quicksave.
 }
 
 startup
@@ -92,6 +96,9 @@ init {
 }
 
 start {
+	if (version == "v1.03") { 
+		return false;
+	}
 
 	vars.introGameTimeAdded = 0;
 	if (current.playerControl != 0 && current.missionsPassed == 0 && !current.isLoading && current.sessionTime > 4000 ) {
@@ -100,6 +107,10 @@ start {
 }
 
 split {
+	if (version == "v1.03") { 
+		return false;
+	}
+
 	if (current.isFinished == 1 && current.isFinished != old.isFinished && !current.isLoading && current.missionsPassed > 26){
 		if (settings["missionFinal"]) {
 			return true;
