@@ -5,16 +5,18 @@ state("Sam2") {
 
 state("Sam2", "252822") {
 	bool isLoading : "Core.dll", 0xBF120;
+	int chapter : "Sam2Game.dll", 0x3C31FC;		// untested, unused game version
 }
 
 state("Sam2", "269486") {
 	bool isLoading : "Core.dll", 0xBF120;
+	int chapter : "Sam2Game.dll", 0x3C31FC;
 }
 
 state("Sam2", "65824") {
 	bool isLoading : "Core.dll", 0xBE120;
-}
-
+	int chapter : "Sam2Game.dll", 0x3C31FC;		// needs finding, dont have this game version anymore
+}/
 
 
 init {
@@ -31,6 +33,13 @@ init {
 
 
 isLoading {
-		return current.isLoading;
+	return current.isLoading;
 }
 
+split {
+	return current.chapter != old.chapter;
+}	
+
+start {
+	return current.chapter != old.chapter;
+}
