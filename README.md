@@ -10,6 +10,7 @@
 - Load remover.  
 - Works with V2.070.00 65824, and V2.080.00 252822 and 269486. Other versions can be supported upon request. Contact: twitch.tv/lotsofs  
 - In case of a game update on Steam, this will break. Please contact me immediately if this happens and I haven't noticed.  
+- Autosplitter works but is very dumb. It splits every time the chapter changes. However, it cannot distinguish between what chapter you changed to. This means that if you just load up a map for practice, it will split. It also mean that this is an all or nothing autosplitter. Either have ~7 splits on average per level, or split manually. On the plus side, it recognizes the 'in between levels' part (scorescreen + loading + cutscenes), and it splitting each chapter means it can be useful for ILs. 
 
 ## Carmageddon 2
 - Autosplitter  
