@@ -16,7 +16,7 @@ state("Sam2", "269486") {
 state("Sam2", "65824") {
 	bool isLoading : "Core.dll", 0xBE120;
 	int chapter : "Sam2Game.dll", 0x3C31FC;		// needs finding, dont have this game version anymore
-}/
+}
 
 
 init {
