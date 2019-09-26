@@ -31,15 +31,18 @@ init {
 	}
 }
 
-
 isLoading {
 	return current.isLoading;
 }
 
 split {
-	return current.chapter != old.chapter;
+	if (current.chapter > vars.chapter) {
+		vars.chapter = vars.chapter + 1;
+		return true;
+	}
 }	
 
 start {
+	vars.chapter = current.chapter;
 	return current.chapter != old.chapter;
 }
