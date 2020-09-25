@@ -87,10 +87,10 @@ startup {
 
 init {
 	if (current.version103Steam == 18516) {
-		version = "v1.03Steam";   
+		version = "v1.03 Steam";   
 	}
 	else if (current.version103Gog == 18516) {
-		version = "v1.03Gog";   
+		version = "v1.03 GOG";   
 	}
 	else if (current.version100 == 18516) {
 		version = "v1.00";
