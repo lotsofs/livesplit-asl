@@ -9,11 +9,11 @@ state("FarCry2") {
 	int version100 : "Dunia.dll", 0xEE3078;
 }
 
-state("FarCry2", "v1.03Steam") {
+state("FarCry2", "v1.03 Steam") {
 	bool isLoading : "Dunia.dll", 0x1645C4C;
 }
 
-state ("FarCry2", "v1.03Gog") {
+state ("FarCry2", "v1.03 GOG") {
 		bool isLoading : "Dunia.dll", 0x159502C;
 }
 
