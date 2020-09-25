@@ -96,7 +96,15 @@ init {
 		version = "v1.00";
 	}
 	else {
-		if (current.version103 == 0) {
+		// How does init work exactly. Does this do anything? This seems like it's just going to throw a bunch of false positives on v1.02 or whatever.
+		// But I dont want to immediately set the version to unrecognized incase the game process legiitimately isn't fully initialized yet but init just doesn't happen again.
+		if (current.version103Steam == 0) {
+			throw new Exception("game process not fully initialized yet");
+		}
+		else if (current.version103Gog == 0) {
+			throw new Exception("game process not fully initialized yet");
+		}
+		else if (current.version100 == 0) {
 			throw new Exception("game process not fully initialized yet");
 		}
 		else {
