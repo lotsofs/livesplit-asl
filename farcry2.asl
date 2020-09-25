@@ -4,12 +4,17 @@
 /// If you want me to add support for V1.01 V1.02 or whatever contact me twitch.tv/lotsofs
 
 state("FarCry2") {
-	int version103 : "Dunia.dll", 0xF940F0;
+	int version103Steam : "Dunia.dll", 0xF940F0;
+	int version103Gog : "Dunia.dll", 0xEED0F0;
 	int version100 : "Dunia.dll", 0xEE3078;
 }
 
-state("FarCry2", "v1.03") {
+state("FarCry2", "v1.03Steam") {
 	bool isLoading : "Dunia.dll", 0x1645C4C;
+}
+
+state ("FarCry2", "v1.03Gog") {
+		bool isLoading : "Dunia.dll", 0x159502C;
 }
 
 state("FarCry2", "v1.00") {
@@ -81,8 +86,11 @@ startup {
 }
 
 init {
-	if (current.version103 == 18516) {
-		version = "v1.03";   
+	if (current.version103Steam == 18516) {
+		version = "v1.03Steam";   
+	}
+	else if (current.version103Gog == 18516) {
+		version = "v1.03Gog";   
 	}
 	else if (current.version100 == 18516) {
 		version = "v1.00";
@@ -144,5 +152,4 @@ gameTime {
 		}
 	}
 }
-
 
