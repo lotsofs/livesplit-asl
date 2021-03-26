@@ -37,6 +37,18 @@ init {
 	if (current.version2070 == 65824) {
 		version = "65824";
 	}
+	else {
+		if (current.version2080 == 0) {
+			throw new Exception("game process not fully initialized yet");
+		}
+		else if (current.version2070 == 0) {
+			throw new Exception("game process not fully initialized yet");
+		}
+	}
+}
+
+exit {
+	vars.chapter = 0;
 }
 
 isLoading {
@@ -48,7 +60,7 @@ split {
 		vars.chapter = vars.chapter + 1;
 		return true;
 	}
-}	
+}
 
 start {
 	vars.chapter = current.chapter;
