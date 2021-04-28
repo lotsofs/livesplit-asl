@@ -3,6 +3,11 @@ state("Sam2") {
 	int version2070 : "Core.dll", 0xB5C68;
 }	
 
+state("Sam2", "593613") {
+	bool isLoading : "Core.dll", 0xBF120;
+	int chapter : "Sam2Game.dll", 0x3F2628;		// 2.091
+}
+
 state("Sam2", "591918") {
 	bool isLoading : "Core.dll", 0xBF120;
 	int chapter : "Sam2Game.dll", 0x3F15C8;		// 2.090
@@ -25,6 +30,9 @@ state("Sam2", "65824") {
 
 
 init {
+	if (current.version2080 == 593613) {
+		version = "593613";
+	}
 	if (current.version2080 == 591918) {
 		version = "591918";
 	}
