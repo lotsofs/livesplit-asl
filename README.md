@@ -2,8 +2,8 @@
 
 ## Age of Empires II: Definitive Edition
 - Game Time Display & Tracker  
-- This timer currently does not track time lost due to resets etc. It is only useful for mid-level split tracking and timing ILs in full run contexts. If you do a full run and don't reset any level, the total game time should be accurate however.
-- Tested with current version only. Can add more if you provide me with the memory addresses. Contact: discord.gg/lotsofs  
+- This timer currently does not track time lost due to resets etc. It is only useful for timing ILs in full run contexts, and for those who wish to have splits for their ILs. If you do a full run and don't reset any level, the total game time should be accurate however.
+- Tested with current version only. Can add older versions if you provide me with the memory addresses. Contact: discord.gg/lotsofs  
 - In case of a game update on Steam, this might break. Please contact me immediately if this happens and I haven't noticed.    
 
 ## Carmageddon 2
