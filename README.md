@@ -1,8 +1,8 @@
 # livesplit-asl files by S.
 
 ## Age of Empires II: Definitive Edition
-- Autostart splits as the loading finishes
-- Autosplit upon map victory, as well as (optionally) upon completed loading of the next map (useful for quarantaining RTA menu times to their own separate split)
+- Auto splits as the map begins
+- Autosplit upon map victory, as well as (optionally) upon completed start of the next map (the latter useful for quarantaining RTA menu times to their own separate split)
 - Game Time Display & Tracker
 -> Keeps track of IL PBs in Full Run contexts by means of gold splits. (Note: Victories/defeats always occur on the whole second mark, in case you're wondering why all your Game Time Golds are such perfect numbers :) ) 
 -> Time lost due to map restarts / loading saves can (optionally) be added to its own separate split at the end. 
