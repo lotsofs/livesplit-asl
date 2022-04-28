@@ -1,8 +1,12 @@
 # livesplit-asl files by S.
 
 ## Age of Empires II: Definitive Edition
-- Game Time Display & Tracker  
-- This timer currently does not track time lost due to resets etc. It is only useful for timing ILs in full run contexts, and for those who wish to have splits for their ILs. If you do a full run and don't reset any level, the total game time should be accurate however.
+- Autostart splits as the loading finishes
+- Autosplit upon map victory, as well as (optionally) upon completed loading of the next map (useful for quarantaining RTA menu times to their own separate split)
+- Game Time Display & Tracker
+-> Keeps track of IL PBs in Full Run contexts by means of gold splits. (Note: Victories/defeats always occur on the whole second mark, in case you're wondering why all your Game Time Golds are such perfect numbers :) ) 
+-> Time lost due to map restarts / loading saves can (optionally) be added to its own separate split at the end. 
+-> Unfortunately, for now this game time tracker also saves invalid IL times (eg. due to loaded saves) as golds. You will have to manually undo these splits for now to prevent them from overwriting your legitimate golds.
 - Tested with current versions only. Can add older versions if you provide me with the memory addresses. Contact: discord.gg/lotsofs  
 - I try to update this when the game updates, but I might miss it or forget. Let me know if this is the case.    
 
