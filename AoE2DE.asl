@@ -87,8 +87,8 @@ gameTime {
 		// we just won. Dump the game time to a var so we can have cumulative game time.
 		vars.totalGameTime += current.gameTimer;
 	}
-	else if (old.victory == 0 && (current.victory == 4 || current.victory == 7)) {
-		// If gamestate is 4 (resigned) or 7 (defeated), dump the current gametime to a 'lost time' variable
+	else if (old.victory == 0 && (current.victory == 4 || current.victory == 7 || current.victory == 9)) {
+		// If gamestate is 4 (resigned) or 7 (defeated) or 9 (loading a save), dump the current gametime to a 'lost time' variable
 		vars.lostGameTime += current.gameTimer;
 	}
 	else if (current.gameTimer < old.gameTimer && current.gameTimer > 1000) {
