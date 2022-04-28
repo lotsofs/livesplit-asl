@@ -27,6 +27,7 @@ startup {
 	vars.totalGameTime = 0;
 	vars.lostGameTime = 0;
 	vars.lastSplitSplut = false;
+	vars.nextMapStarting = false;
 	
 	settings.Add("splitOnMapStartAfterWin", false, "Split on next map start");
 	settings.SetToolTip("splitOnMapStartAfterWin", "Split when the next map begins. Only triggers if the previous map was a victory.");
@@ -38,10 +39,9 @@ startup {
 }
 
 split {
-	if (settings["splitOnMapStartAfterWin"]) {
-		if (old.victory == 6 && current.victory == 0) {
-			return true;
-		}
+	if (settings["splitOnMapStartAfterWin"] && old.gameTimer == 0 && current.gameTimer > 0) {
+		vars.nextMapStarting = false;
+		return true;
 	}
 	if (settings["splitOnMapWin"]) {
 		if (old.victory == 0 && current.victory == 6) {
@@ -57,12 +57,19 @@ split {
 }
 
 start {
-	if (old.victory != 0 && current.victory == 0) {
+	if (old.gameTimer == 0 && current.gameTimer > 0) {
 		return true;
 	}
 }
 
 update {
+	if (vars.nextMapStarting == true && current.gameTimer > 200) {
+		vars.nextMapStarting = false;
+	}
+	if (old.victory == 6 && current.victory == 0) {
+		vars.nextMapStarting = true;
+	}
+	
 	if (timer.CurrentPhase == TimerPhase.NotRunning) {
 		vars.totalGameTime = 0;
 		vars.lostGameTime = 0;
@@ -73,7 +80,7 @@ update {
 }
 
 isLoading {
-	if (current.victory != 0) {
+	if (current.victory != 0 || vars.nextMapStarting == true) {
 		return true;
 	}
 	else {
@@ -99,6 +106,9 @@ gameTime {
 	// return stuff
 	if (current.victory == 6 && settings["addLostTimeToLast"] && timer.CurrentSplitIndex == timer.Run.Count - 1) {
 		return TimeSpan.FromMilliseconds(vars.totalGameTime + vars.lostGameTime);
+	}
+	else if (vars.nextMapStarting == true) {
+		return TimeSpan.FromMilliseconds(vars.totalGameTime);
 	}
 	else if (current.victory == 6) {
 		return TimeSpan.FromMilliseconds(vars.totalGameTime);
