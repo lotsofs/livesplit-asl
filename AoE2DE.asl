@@ -25,11 +25,50 @@ init {
 
 startup {
 	vars.totalGameTime = 0;
+	vars.lostGameTime = 0;
+	vars.lastSplitSplut = false;
+	
+	settings.Add("splitOnMapStartAfterWin", false, "Split on next map start");
+	settings.SetToolTip("splitOnMapStartAfterWin", "Split when the next map begins. Only triggers if the previous map was a victory.");
+	
+	settings.Add("splitOnMapWin", true, "Split on map win");
+	
+	settings.Add("addLostTimeToLast", false, "Include Split for Lost Game Time at End");
+	settings.SetToolTip("addLostTimeToLast", "With this enabled, when reaching the last split, all the game time lost due to resets is added to the last split's game time and then it splits (finishing the run). This keeps the main splits' functionality for reading IL times. If disabled, this lost time is not counted at all.");
+}
+
+split {
+	if (settings["splitOnMapStartAfterWin"]) {
+		if (old.victory == 6 && current.victory == 0) {
+			return true;
+		}
+	}
+	if (settings["splitOnMapWin"]) {
+		if (old.victory == 0 && current.victory == 6) {
+			return true;
+		}
+	}
+	if (settings["addLostTimeToLast"] && !vars.lastSplitSplut) {
+		if (current.victory == 6 && timer.CurrentSplitIndex == timer.Run.Count - 1) {
+			vars.lastSplitSplut = true;
+			return true;
+		}
+	}
+}
+
+start {
+	if (old.victory != 0 && current.victory == 0) {
+		return true;
+	}
 }
 
 update {
 	if (timer.CurrentPhase == TimerPhase.NotRunning) {
 		vars.totalGameTime = 0;
+		vars.lostGameTime = 0;
+	}
+	if (vars.lastSplitSplut && timer.CurrentSplitIndex < timer.Run.Count - 1) {
+		vars.lastSplitSplut = false;
 	}
 }
 
@@ -43,9 +82,23 @@ isLoading {
 }
 
 gameTime {
+	// perform calculations
 	if (old.victory == 0 && current.victory == 6) {
+		// we just won. Dump the game time to a var so we can have cumulative game time.
 		vars.totalGameTime += current.gameTimer;
-		return TimeSpan.FromMilliseconds(vars.totalGameTime);
+	}
+	else if (old.victory == 0 && (current.victory == 4 || current.victory == 7)) {
+		// If gamestate is 4 (resigned) or 7 (defeated), dump the current gametime to a 'lost time' variable
+		vars.lostGameTime += current.gameTimer;
+	}
+	else if (current.gameTimer < old.gameTimer && current.gameTimer > 1000) {
+		// When loading a save, remove restored game time from the time lost marked above, since it was not actually lost. 
+		vars.lostGameTime -= current.gameTimer;
+	}
+
+	// return stuff
+	if (current.victory == 6 && settings["addLostTimeToLast"] && timer.CurrentSplitIndex == timer.Run.Count - 1) {
+		return TimeSpan.FromMilliseconds(vars.totalGameTime + vars.lostGameTime);
 	}
 	else if (current.victory == 6) {
 		return TimeSpan.FromMilliseconds(vars.totalGameTime);
