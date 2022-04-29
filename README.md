@@ -1,7 +1,7 @@
 # livesplit-asl files by S.
 
 ## Age of Empires II: Definitive Edition
-- Auto starts as the map begins
+- Auto starts as the map begins. Note: A map needs to be started beforehand in the current game session or it won't detect, but afterwards it will work every time.
 - Autosplit upon map victory, as well as (optionally) upon completed start of the next map (the latter useful for quarantaining RTA menu times to their own separate split)
 - Game Time Display & Tracker
 -> Keeps track of IL PBs in Full Run contexts by means of gold splits. (Note: Victories/defeats always occur on the whole second mark, in case you're wondering why all your Game Time Golds are such perfect numbers :) ) 
