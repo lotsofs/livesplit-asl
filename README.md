@@ -11,10 +11,11 @@
 - I try to update this when the game updates, but I might miss it or forget. Let me know if this is the case.    
 
 ## Carmageddon 2
-- Autosplitter  
+- Autosplitter for pedestrians only.
 - Tested with Steam version only  
 - In case of a game update on Steam, this might break. Please contact me immediately if this happens and I haven't noticed.  
 - Also contact me if you're using this at all. I don't expect anyone to use this, but it would be awesome if they did.  
+- Someone else has made an autosplitter for wrecking & racing. You should use that one. 
 
 ## Far Cry 2  
 - Load remover for V1.03 & V1.00 No CD.    
