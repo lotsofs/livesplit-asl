@@ -2,23 +2,31 @@
 state("AoE2DE_s") {
 	int version59165 : "AoE2DE_s.exe", 0xE08D94;	// AoE2DE_s.exe+E08D94
 	int version61321 : "AoE2DE_s.exe", 0x3ACFF58;	// AoE2DE_s.exe+3ACFF58
+	int version63482 : "AoE2DE_s.exe", 0x3AD6138; 	// AoE2DE_s.exe+3AD6138
 }
 
 state("AoE2DE_s", "59165") {
-	int gameTimer : "AoE2DE_s.exe", 0x3C2FB7C; // AoE2DE_s.exe+3C2FB7C
-	int victory : "AoE2DE_s.exe", 0x3CAA318; // AoE2DE_s.exe+3CAA318
+	int gameTimer : "AoE2DE_s.exe", 0x3C2FB7C; 		// AoE2DE_s.exe+3C2FB7C
+	int victory : "AoE2DE_s.exe", 0x3CAA318;   		// AoE2DE_s.exe+3CAA318
 }
 
 state("AoE2DE_s", "61321") {
-	int gameTimer : "AoE2DE_s.exe", 0x39F54AC; // AoE2DE_s.exe+39F54AC
-	int victory : "AoE2DE_s.exe", 0x3A67A78; // AoE2DE_s.exe+3ACFF58
+	int gameTimer : "AoE2DE_s.exe", 0x39F54AC; 		// AoE2DE_s.exe+39F54AC
+	int victory : "AoE2DE_s.exe", 0x3A67A78;   		// AoE2DE_s.exe+3A67A78
 }
+
+state("AoE2DE_s", "63482") {
+	int gameTimer : "AoE2DE_s.exe", 0x39FB4AC; 		// AoE2DE_s.exe+39FB4AC
+	int victory : "AoE2DE_s.exe", 0x3A6DA88;   		// AoE2DE_s.exe+3A6DA88
+}
+
 
 init {
 	if (false) { }
 	else if (current.version59165 == 59165) { version = "59165"; }	// February '22
 	else if (current.version61321 == 61321) { version = "61321"; }	// April '22 (Dynasties of India Update)
 	else if (current.version61321 == 61591) { version = "61321"; }	// 	Hotfix (April '22)
+	else if (current.version63482 == 63482) { version = "63482"; }	// June '22
 	else { 
 		throw new Exception("Either the game is still booting, or this is a different game. Sort it out yourself."); 
 	}
@@ -40,9 +48,11 @@ startup {
 }
 
 split {
-	if (settings["splitOnMapStartAfterWin"] && old.gameTimer == 0 && current.gameTimer > 0) {
+	if (vars.nextMapStarting == true && old.gameTimer == 0 && current.gameTimer > 0) {
 		vars.nextMapStarting = false;
-		return true;
+		if (settings["splitOnMapStartAfterWin"]) {
+			return true;
+		}
 	}
 	if (settings["splitOnMapWin"]) {
 		if (old.victory == 0 && current.victory == 6) {
@@ -64,18 +74,24 @@ start {
 }
 
 update {
-	if (vars.nextMapStarting == true && current.gameTimer > 200) {
+	if (vars.nextMapStarting == true && current.gameTimer > 5000) {
+		// just something to mark this thing as not loading anymore in case it hasn't been done so by split() already
 		vars.nextMapStarting = false;
 	}
 	if (old.victory == 6 && current.victory == 0) {
+		// map finished loading, but hasn't started yet.
 		vars.nextMapStarting = true;
 	}
 	
 	if (timer.CurrentPhase == TimerPhase.NotRunning) {
+		// timer stopped. reset values
 		vars.totalGameTime = 0;
 		vars.lostGameTime = 0;
+		vars.lastSplitSplut = false;
+		vars.nextMapStarting = false;
 	}
 	if (vars.lastSplitSplut && timer.CurrentSplitIndex < timer.Run.Count - 1) {
+		// we undid the last two splits. Mark the last split as autosplittable again.
 		vars.lastSplitSplut = false;
 	}
 }
@@ -106,15 +122,19 @@ gameTime {
 
 	// return stuff
 	if (current.victory == 6 && settings["addLostTimeToLast"] && timer.CurrentSplitIndex == timer.Run.Count - 1) {
+		// we won the last map and the setting is enabled
 		return TimeSpan.FromMilliseconds(vars.totalGameTime + vars.lostGameTime);
 	}
 	else if (vars.nextMapStarting == true) {
+		// loading finished, but map hasn't started yet (eg. waiting for coop partner)
 		return TimeSpan.FromMilliseconds(vars.totalGameTime);
 	}
 	else if (current.victory == 6) {
+		// we won a map
 		return TimeSpan.FromMilliseconds(vars.totalGameTime);
 	}
 	else {
+		// ingame
 		return TimeSpan.FromMilliseconds(vars.totalGameTime + current.gameTimer);
 	}
 }
