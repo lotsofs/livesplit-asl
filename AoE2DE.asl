@@ -1,35 +1,19 @@
-/// Simple script 
-state("AoE2DE_s") {
-	int version59165 : "AoE2DE_s.exe", 0xE08D94;	// AoE2DE_s.exe+E08D94
-	int version61321 : "AoE2DE_s.exe", 0x3ACFF58;	// AoE2DE_s.exe+3ACFF58
-	int version63482 : "AoE2DE_s.exe", 0x3AD6138; 	// AoE2DE_s.exe+3AD6138
+state("AoE2DE_s", "85614") {
+	int gameTimer : "AoE2DE_s.exe", 0x3D5CEC4;			// AoE2DE_s.exe+3D5CEC4
+	int victory :	"AoE2DE_s.exe", 0x3DD07D8, 0x5E8; 	// AoE2DE_s.exe+3DD07D8 +5E8
 }
-
-state("AoE2DE_s", "59165") {
-	int gameTimer : "AoE2DE_s.exe", 0x3C2FB7C; 		// AoE2DE_s.exe+3C2FB7C
-	int victory : "AoE2DE_s.exe", 0x3CAA318;   		// AoE2DE_s.exe+3CAA318
-}
-
-state("AoE2DE_s", "61321") {
-	int gameTimer : "AoE2DE_s.exe", 0x39F54AC; 		// AoE2DE_s.exe+39F54AC
-	int victory : "AoE2DE_s.exe", 0x3A67A78;   		// AoE2DE_s.exe+3A67A78
-}
-
-state("AoE2DE_s", "63482") {
-	int gameTimer : "AoE2DE_s.exe", 0x39FB4AC; 		// AoE2DE_s.exe+39FB4AC
-	int victory : "AoE2DE_s.exe", 0x3A6DA88;   		// AoE2DE_s.exe+3A6DA88
-}
-
 
 init {
-	if (false) { }
-	else if (current.version59165 == 59165) { version = "59165"; }	// February '22
-	else if (current.version61321 == 61321) { version = "61321"; }	// April '22 (Dynasties of India Update)
-	else if (current.version61321 == 61591) { version = "61321"; }	// 	Hotfix (April '22)
-	else if (current.version63482 == 63482) { version = "63482"; }	// June '22
-	else { 
-		throw new Exception("Either the game is still booting, or this is a different game. Sort it out yourself."); 
-	}
+	version = modules.First().FileVersionInfo.FileVersion;
+	
+	switch (version) {
+		case "101.102.20078.0":
+			version = "85614";	// Return of Rome hotfix
+			break;
+		default:
+			version = "Unsupported (" + version + "). Contact LotsOfS.";
+			break;
+	}	
 }
 
 startup {
