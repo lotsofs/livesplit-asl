@@ -24,7 +24,7 @@ init {
 	
 	switch (version) {
 		case "101.102.22327.0":
-			version = "87863"	// June 28 Update (Minecraft Legends Event)
+			version = "87863";	// June 28 Update (Minecraft Legends Event)
 			break;
 		case "101.102.20078.0":
 			version = "85614";	// Return of Rome hotfix
