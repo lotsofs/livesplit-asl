@@ -1,3 +1,5 @@
+// https://github.com/lotsofs/livesplit-asl/blob/master/AoE2DE.asl
+
 // victory:
 // 0 = gameplay
 // 4 = resigned
@@ -5,7 +7,12 @@
 // 7 = defeated
 // 9 = loading a save from pause menu
 
-// note to self: If non-supported version, defaults to the top one in these states. So put these in order newest -> oldest.
+// If non-supported version, defaults to the top one in these states. So put these in order newest -> oldest.
+
+state("AoE2DE_s", "87863") {
+	int gameTimer : "AoE2DE_s.exe", 0x03DDB5C0, 0x20;	// "AoE2DE_s.exe"+03DDB5C0 +20
+	int victory : 	"AoE2DE_s.exe", 0x03DAFD78, 0x5E8;	// "AoE2DE_s.exe"+03DAFD78 +5E8
+}
 
 state("AoE2DE_s", "85614") {
 	int gameTimer : "AoE2DE_s.exe", 0x3D5CEC4;			// AoE2DE_s.exe+3D5CEC4
@@ -16,6 +23,9 @@ init {
 	version = modules.First().FileVersionInfo.FileVersion;
 	
 	switch (version) {
+		case "101.102.22327.0":
+			version = "87863"	// June 28 Update (Minecraft Legends Event)
+			break;
 		case "101.102.20078.0":
 			version = "85614";	// Return of Rome hotfix
 			break;
