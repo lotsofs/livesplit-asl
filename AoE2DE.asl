@@ -77,7 +77,7 @@ start {
 }
 
 onReset {
-		// timer stopped. reset values
+	// timer stopped. reset values
 	if (timer.CurrentPhase == TimerPhase.NotRunning) {
 		vars.totalGameTime = 0;
 		vars.lostGameTime = 0;
@@ -102,12 +102,9 @@ update {
 }
 
 isLoading {
-	if (current.victory != 0 || vars.nextMapStarting == true) {
-		return true;
-	}
-	else {
-		return false;
-	}
+	// always return true since we're going 100% off ingame time anyway and we're not tracking actual loading times
+	// avoid the centisecond count from jumping and resetting constantly
+	return true;
 }
 
 gameTime {
@@ -149,21 +146,17 @@ gameTime {
 	// return stuff
 
 	// If we're on the last split and the setting for quarantaining lost time is enabled, add it back now
-	if (settings["addLostTimeToLast"]) {
-		if (current.victory == 6 && timer.CurrentSplitIndex == timer.Run.Count - 1) {
-			return TimeSpan.FromMilliseconds(vars.totalGameTime + vars.lostGameTime);
-		}
+	if (settings["addLostTimeToLast"] && current.victory == 6 && timer.CurrentSplitIndex == timer.Run.Count - 1) {
+		return TimeSpan.FromMilliseconds(vars.totalGameTime + vars.lostGameTime);
 	}
 	// loading finished, but map hasn't started yet (eg. waiting for coop partner)
-	else if (vars.nextMapStarting == true) {
+	if (vars.nextMapStarting == true) {
 		return TimeSpan.FromMilliseconds(vars.totalGameTime);
 	}
 	// a map just ended (fail/win) and the timer in game is now not running
-	else if (current.victory != 0) {
+	if (current.victory != 0) {
 		return TimeSpan.FromMilliseconds(vars.totalGameTime);
 	}
 	// We're ingame.
-	else {
-		return TimeSpan.FromMilliseconds(vars.totalGameTime + current.gameTimer);
-	}
+	return TimeSpan.FromMilliseconds(vars.totalGameTime + current.gameTimer);
 }
