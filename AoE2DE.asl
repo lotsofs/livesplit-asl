@@ -1,5 +1,9 @@
 // https://github.com/lotsofs/livesplit-asl/blob/master/AoE2DE.asl
 
+// Generate pointermap
+// Pointerscan for this address
+// Use saved pointermap
+
 // victory:
 // 0 = gameplay
 // 4 = resigned
@@ -8,6 +12,11 @@
 // 9 = loading a save from pause menu
 
 // If non-supported version, defaults to the top one in these states. So put these in order newest -> oldest.
+
+state("AoE2DE_s", "90260") {
+	int gameTimer : "AoE2DE_s.exe", 0x3D3D7E4; 			// "AoE2DE_s.exe"+03D3D7E4
+	int victory : 	"AoE2DE_s.exe", 0x03DB0D88, 0x5E8;	// "AoE2DE_s.exe"+03DB0D88 +5E8
+}
 
 state("AoE2DE_s", "87863") {
 	int gameTimer : "AoE2DE_s.exe", 0x03DDB5C0, 0x20;	// "AoE2DE_s.exe"+03DDB5C0 +20
@@ -23,6 +32,9 @@ init {
 	version = modules.First().FileVersionInfo.FileVersion;
 	
 	switch (version) {
+		case "101.102.24724.0":
+			version = "90260";	// July 26 2023 (Star Age Event)
+			break;
 		case "101.102.22327.0":
 			version = "87863";	// June 28 Update (Minecraft Legends Event)
 			break;
