@@ -10,28 +10,38 @@
 // 6 = victory
 // 7 = defeated
 // 9 = loading a save from pause menu
+// Not applicable in Scenario Editor
+
+// Time is tracked in MS
 
 // If non-supported version, defaults to the top one in these states. So put these in order newest -> oldest.
+state("AoE2DE_s", "93001") {
+	int gameTimer : "AoE2DE_s.exe", 0x03CF6A74; 		// "AoE2DE_s.exe"+3CF6A74
+	int gameState : "AoE2DE_s.exe", 0x03D6AF88, 0x5E8;	// "AoE2DE_s.exe"+03DB0D88 +5E8	
+}
 
 state("AoE2DE_s", "90260") {
-	int gameTimer : "AoE2DE_s.exe", 0x3D3D7E4; 			// "AoE2DE_s.exe"+03D3D7E4
-	int gameState : 	"AoE2DE_s.exe", 0x03DB0D88, 0x5E8;	// "AoE2DE_s.exe"+03DB0D88 +5E8
+	int gameTimer : "AoE2DE_s.exe", 0x03D3D7E4; 		// "AoE2DE_s.exe"+03D3D7E4
+	int gameState : "AoE2DE_s.exe", 0x03DB0D88, 0x5E8;	// "AoE2DE_s.exe"+03DB0D88 +5E8
 }
 
 state("AoE2DE_s", "87863") {
 	int gameTimer : "AoE2DE_s.exe", 0x03DDB5C0, 0x20;	// "AoE2DE_s.exe"+03DDB5C0 +20
-	int gameState : 	"AoE2DE_s.exe", 0x03DAFD78, 0x5E8;	// "AoE2DE_s.exe"+03DAFD78 +5E8
+	int gameState : "AoE2DE_s.exe", 0x03DAFD78, 0x5E8;	// "AoE2DE_s.exe"+03DAFD78 +5E8
 }
 
 state("AoE2DE_s", "85614") {
-	int gameTimer : "AoE2DE_s.exe", 0x3D5CEC4;			// AoE2DE_s.exe+3D5CEC4
-	int gameState :	"AoE2DE_s.exe", 0x3DD07D8, 0x5E8; 	// AoE2DE_s.exe+3DD07D8 +5E8
+	int gameTimer : "AoE2DE_s.exe", 0x03D5CEC4;			// AoE2DE_s.exe+3D5CEC4
+	int gameState :	"AoE2DE_s.exe", 0x03DD07D8, 0x5E8; 	// AoE2DE_s.exe+3DD07D8 +5E8
 }
 
 init {
 	version = modules.First().FileVersionInfo.FileVersion;
 	
 	switch (version) {
+		case "101.102.27465.0":
+			version = "93001"; // Early September update (Return of Rome Event)
+			break;
 		case "101.102.24724.0":
 			version = "90260";	// July 26 2023 (Star Age Event)
 			break;
@@ -70,17 +80,20 @@ split {
 			vars.mapReset = false;
 		}
 		else if (settings["splitOnMapStartAfterWin"]) {
+			print("[AoE2DE Autosplitter] Splitting on map start after win");
 			return true;
 		}
 	}
 	if (settings["splitOnMapWin"]) {
 		if (old.gameState == 0 && current.gameState == 6) {
+			print("[AoE2DE Autosplitter] Splitting on map win");
 			return true;
 		}
 	}
 	if (settings["addLostTimeToLast"] && !vars.lastSplitSplut) {
 		if (current.gameState == 6 && timer.CurrentSplitIndex == timer.Run.Count - 1) {
 			vars.lastSplitSplut = true;
+			print("[AoE2DE Autosplitter] Lost time added to last. Splitting.");
 			return true;
 		}
 	}
@@ -113,7 +126,7 @@ update {
 		vars.nextMapStarting = true;
 		if (old.gameState != 6) {
 			// Not actually a victory, prevent timer from splitting.
-			vars.mapReset = false;
+			vars.mapReset = true;
 		}
 	}
 	// We undid the lost time dump split and its previous one. Mark the last split as autosplittable again.
@@ -137,7 +150,6 @@ gameTime {
 	// 9 = loading a save from pause menu
 
 	// perform calculations
-
 	// We just won. Dump the game time to a var for cumulative game time
 	if (old.gameState == 0 && current.gameState == 6) {
 		vars.totalGameTime += current.gameTimer;
