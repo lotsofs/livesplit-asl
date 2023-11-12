@@ -5,6 +5,10 @@
  * instead...
  * /
 
+/* This could come in useful:
+ * https://docs.google.com/spreadsheets/d/15iu5n86RzrQNZib-sL_FQRU6hcIab3VjWMak_Oj88HM/edit#gid=1480623135
+ * /
+
 /*
  * All addresses defined in this script are relative to the module, so without
  * the 0x400000 or whatever the module address is (different for more recent
@@ -110,7 +114,7 @@ startup
 			{3, "Wrong Side of the Tracks"},
 			{4, "Just Business"}
 		}},
-		{0x64A074, new Dictionary<int, string> { // $r_TOTAL_PASSED_MISSIONS
+		{0x64A074, new Dictionary<int, string> { // $RYDER_TOTAL_PASSED_MISSIONS
 			{1, "Home Invasion"},
 			{2, "Catalyst"},
 			{3, "Robbing Uncle Sam"}
@@ -156,12 +160,16 @@ startup
 			{2, "Are You Going To San Fierro?"}
 		}},
 		{0x64A110, new Dictionary<int, string> { // $CESAR_TOTAL_PASSED_MISSIONS
-			{5, "Wu Zi Mu"}, // 2 = race ongoing, 3 = race finished prefadeout, 4 = cutscene
-			{10, "Farewell, My Love"} // 7 = race ongoing, 8 = race finished prefadeout, 9 = cutscene
+			{2, "Wu Zi Mu Starting Cutscene Ended"},
+			{3, "Wu Zi Mu Race Finished"},
+			{4, "Wu Zi Mu Ending Cutscene Started"},
+			{5, "Wu Zi Mu"},
+			{7, "Farewell, My Love Starting Cutscene Ended"},
+			{8, "Farewell, My Love Race Finished"},
+			{9, "Farewell, My Love Ending Cutscene Started"},
+			{10, "Farewell, My Love"}
 		}},
         {0x64BDC8, new Dictionary<int, string> { // $RACES_WON_NUMBER (first 3 Races are in a fixed order due to missions)
-			// {2, "Wu Zi Mu"},
-			// {3, "Farewell, My Love"},
 			{25, "All Races Won"}
 		}},
 		{0x64A1D4, new Dictionary<int, string> { // $GARAGE_TOTAL_PASSED_MISSIONS
@@ -282,6 +290,38 @@ startup
 		{0x64ABE0, new Dictionary<int, string> { // $ALL_CARS_COLLECTED_FLAG
 			{1, "Export List 3"}
 		}},
+		{0x779174, new Dictionary<int, string> {
+			{1, "Export Number 1"},
+			{2, "Export Number 2"},
+			{3, "Export Number 3"},
+			{4, "Export Number 4"},
+			{5, "Export Number 5"},
+			{6, "Export Number 6"},
+			{7, "Export Number 7"},
+			{8, "Export Number 8"},
+			{9, "Export Number 9"},
+			{10, "Export Number 10"},
+			{11, "Export Number 11"},
+			{12, "Export Number 12"},
+			{13, "Export Number 13"},
+			{14, "Export Number 14"},
+			{15, "Export Number 15"},
+			{16, "Export Number 16"},
+			{17, "Export Number 17"},
+			{18, "Export Number 18"},
+			{19, "Export Number 19"},
+			{20, "Export Number 20"},
+			{21, "Export Number 21"},
+			{22, "Export Number 22"},
+			{23, "Export Number 23"},
+			{24, "Export Number 24"},
+			{25, "Export Number 25"},
+			{26, "Export Number 26"},
+			{27, "Export Number 27"},
+			{28, "Export Number 28"},
+			{29, "Export Number 29"},
+			{30, "Export Number 30"},
+		}},
 		{6592864 + (1861 * 4), new Dictionary<int, string> { // $1861
 			{1, "Pistol Round 1"},
 			{2, "Pistol Round 2"},
@@ -350,10 +390,6 @@ startup
 			{0x64A50C, "Whetstone (Safehouse)"},
 			{0x64A4DC, "Whitewood Estate (Safehouse)"},
 			{0x64A538, "Willowfield (Safehouse)"},
-		}},
-		{"Freight", new Dictionary<int, string> {
-			{0x651A20, "Freight Level 1"},	// $8240
-			{0x651A1C, "Freight Level 2"},	// $8239 (goes to 2 at the end of the level)
 		}},
 		{"Gym Moves", new Dictionary<int, string> {
 			{0x6518C4, "Los Santos Gym Moves"}, 	// $8153
@@ -467,11 +503,8 @@ startup
 	// Misc boolean values
 	//====================
 	vars.missions4 = new Dictionary<int, string> {
-		{ 6592864 + (161 * 4), "freight_started" },
 		{ 6592864 + (54 * 4), "itb_grovestreethome" }, // $HELP_INTRO_SHOWN
 		{ 6592864 + (162 * 4), "pimping_started" },
-		{ 6592864 + (1514 * 4), "r_failed" },
-		{ 6592864 + (1883 * 4), "valet_started" },
 	};
 
 	// Import/Export
@@ -544,8 +577,10 @@ startup
 		{"Mike Toreno", new List<string> {"Lure"}},
 		{"Lure", new List<string> {"Paramedic"}},
 		{"The Da Nang Thang", new List<string> {"Yay Ka-Boom-Boom"}},
+		{"Boat School", new List<string> {"Yay Ka-Boom-Boom","Taxi Driver"}},
 
 		{"Stretch", new List<string> {"Infernus"}},
+		{"Patriot", new List<string> {"Infernus"}},
 		{"Export List 1", new List<string> {"Rancher"}},
 		{"Comet", new List<string> {"Stafford"}},
 		{"BF Injection", new List<string> {"Shooting Range Complete"}},
@@ -572,24 +607,33 @@ startup
 		{"bskool", "Bike School Started"},
 		{"cesar1", "High Stakes Lowrider Started"},
 		{"desert5", "Pilot School Started"},
+		{"drugs4", "Reuniting The Families Started"},
 		{"dskool", "Driving School Started"},
+		{"freight", "Freight Started"},
 		{"grove2", "Grove 4 Life Started"},
 		{"kicksta", "Kickstart Started"},
+		{"la1fin2", "The Green Sabre Started"},
 		{"intro1", "Big Smoke Started"},
 		{"intro2", "Ryder Started"},
 		{"manson5", "Cut Throat Business Started"},
 		{"planes", "Plane Flight"},
 		{"psch", "Verdant Meadows (Airstrip Bought)"},
+		{"ryder3", "Catalyst"},
 		{"steal", "Wang Cars (Showroom Bought)"},
+		{"sweet7", "Los Sepulcros Started"},
+		{"truth2", "Are You Going To San Fierro? Started"},
 	};
 
 	// These missions are not directly split when they become active, but need to
 	// be checked anyway so we can use this knowledge for mission specific subsplits
-	vars.startMissions2 = new Dictionary<string, string> {
-		{"mtbiker", "Chilliad Challenge Started"},
-		{"stunt", "BMX/NRG Challenge Started"},
-		{"truck", "Trucking Started"},
-		{"valet", "Valet Parking Started"},
+	vars.startMissions2 = new List<string> {
+		"bcesar4",	// Wu Zi Mu / Farewell My Love
+		"cprace", 	// Race Tournament / 8 Track / Dirt Track
+		"mtbiker",	// Chilliad CHallenge
+		"stunt",	// BMX / NRG Challenge
+		"truck",	// Trucking
+		"music5",	// House Party (Parts 1 & 2)
+		// "valet",	// Valet / 555 We Tip / General being near the valet building
 	};
 
 	#region utility
@@ -606,6 +650,11 @@ startup
 	};
 	vars.DebugOutput = DebugOutput;
 
+	/*
+	 * Skipping and undoing splits.
+	 */
+	vars.timerModel = new TimerModel { CurrentState = timer };
+
 	//=============================================================================
 	// State keeping
 	//=============================================================================
@@ -618,6 +667,9 @@ startup
 
 	// Most recently started mission thread. Does not get reset when failed or passed.
 	vars.lastStartedMission = "";
+
+	// Bool to track if splits should be skipped instead of splits (for deviating non-linear-esque routes.)
+	vars.skipSplits = false;
 
 	// Track timer phase
 	vars.PrevPhase = null;
@@ -831,7 +883,7 @@ startup
 	addMissionList("LS_Sweet", new List<string>() { 
         "Tagging up Turf", "Cleaning the Hood", "Drive-Thru",
 		"Nines and AKs", "Drive-By", "Sweet's Girl", 
-        "Cesar Vialpando", "Doberman", "Los Sepulcros"
+        "Cesar Vialpando", "Doberman", //"Los Sepulcros"
     });
 	addMissionList("LS_Smoke", new List<string>() { 
         "OG Loc", "Running Dog", "Wrong Side of the Tracks", "Just Business"
@@ -841,7 +893,7 @@ startup
         "House Party (Cutscene)", "House Party" 
     });
 	addMissionList("LS_Ryder", new List<string>() { "Home Invasion", "Catalyst", "Robbing Uncle Sam" });
-	addMissionList("LS_Final", new List<string>() { "Reuniting the Families", "The Green Sabre" });
+	addMissionList("LS_Final", new List<string>() { "Reuniting the Families"});
 	addMissionList("LS_Crash", new List<string>() { "Burning Desire", "Gray Imports"});
 	// addMissionList("LS_Cesar", new List<string>() { "High Stakes Lowrider" });
 
@@ -853,9 +905,9 @@ startup
 	settings.Add("bs", true, "Big Smoke", "LS_Intro");
 	settings.CurrentDefaultParent = "bs";
 	settings.Add("Big Smoke Started", false, "Mission Started");
-	settings.Add("bs_parkinglotcutscenestart", false, "Parking lot cutscene start");
-	settings.Add("bs_parkinglotcutsceneend", false, "Parking lot cutscene end");
-	settings.Add("bs_grovestreet", false, "Grove Street cutscene start");
+	settings.Add("Big Smoke: Parking Lot Cutscene Start", false, "Parking lot cutscene start");
+	settings.Add("Big Smoke: Parking Lot Cutscene End", false, "Parking lot cutscene end");
+	settings.Add("Big Smoke: Grove Street Reached", false, "Grove Street cutscene start");
 	addMissionCustom("Big Smoke", true, "Mission Passed");
 
 	// Ryder
@@ -863,16 +915,52 @@ startup
 	settings.CurrentDefaultParent = "r";
 	settings.Add("Ryder Started", false, "Mission Started");
 	settings.Add("r_failed", false, "Failing the mission (eg. blowing up Ryder's car)");
+	settings.Add("r_restarted", false, "Restarting the mission after failing");
+	settings.Add("r_barberentered", false, "Entering the barbershop");
+	settings.Add("r_hairchanged", false, "Haircut purchased");
 	settings.Add("r_barbershopleft", false, "Leaving the barbershop");
+	settings.Add("r_pizzashopentered", false, "Entering the pizza restaurant");
+	settings.Add("r_pizzabought", false, "Pizza bought");
 	settings.Add("r_pizzashopleft", false, "Leaving the pizza restaurant");
 	settings.Add("r_arrivingathishouse", false, "Arriving back at Ryder's house");
+
 	addMissionCustom("Ryder", true, "Mission Passed");
+
+	// Los Sepulcros
+	settings.Add("lossep", true, "Los Sepulcros", "LS_Sweet");
+	settings.CurrentDefaultParent = "lossep";
+	settings.Add("Los Sepulcros Started", false, "Mission Started");
+	settings.Add("Los Sepulcros: Intro Cutscene End", false, "Intro cutscene ended");
+	settings.Add("Los Sepulcros: One Homie Recruited", false, "1 homie recruited");
+	settings.Add("Los Sepulcros: Two Homies Recruited", false, "All homies recruited");
+	settings.Add("Los Sepulcros: Homies Entered Car", false, "Sweet's car brakes unlocked");
+	settings.Add("Los Sepulcros: Arrival at the Cemetery", false, "Arrival at the cemetery");
+	settings.Add("Los Sepulcros: Wall Climbed", false, "Wall climbed, waiting for Kane");
+	settings.Add("Los Sepulcros: Kane Arrived", false, "Kane's arrival");
+	settings.Add("Los Sepulcros: Kane Dead", false, "Kane killed");
+	settings.Add("Los Sepulcros: Escape Vehicle Entered", false, "Escape vehicle entered");
+	settings.Add("Los Sepulcros: Arrival at Grove Street", false, "Arrival at Grove Street");
+	addMissionCustom("Los Sepulcros", true, "Mission Passed");
 
 	// High Stakes Lowrider
 	settings.Add("hslr", true, "High Stakes Lowrider", "LS_Cesar");
+	settings.SetToolTip("hslr", "See also 'Lowrider Race'");
 	settings.CurrentDefaultParent = "hslr";
 	settings.Add("High Stakes Lowrider Started", false, "Mission Started");
 	addMissionCustom("High Stakes Lowrider", true, "Mission Passed");
+
+	// The Green Sabre
+	settings.Add("tgs", true, "The Green Sabre", "LS_Final");
+	settings.CurrentDefaultParent = "tgs";
+	settings.Add("The Green Sabre Started", false, "Mission Started");
+	settings.Add("The Green Sabre: End of initial cutscene", false, "End of initial cutscene");
+	settings.Add("The Green Sabre: Entered the Bravura", false, "Entered the Bravura");
+	settings.Add("The Green Sabre: Exiting the Bravura", false, "Exiting the Bravura");
+	settings.Add("The Green Sabre: Arriving at the parking lot", false, "Arriving at the parking lot");
+	settings.Add("The Green Sabre: Parking lot shootout start", false, "Parking lot shootout start");
+	settings.Add("The Green Sabre: Parking lot shootout end", false, "Parking lot shootout end");
+	settings.Add("The Green Sabre: Start of cutscene with Tenpenny", false, "Start of cutscene with Tenpenny");
+	addMissionCustom("The Green Sabre", true, "Mission Passed");
 
 	// Badlands
 	//---------
@@ -883,9 +971,40 @@ startup
         "Tanker Commander", "Small Town Bank", 
         "Local Liquor Store", "Against All Odds" 
         });
-	addMissionList("BL_Cesar", new List<string>() { "Wu Zi Mu",	"Farewell, My Love" });
-	addMissionList("BL_Truth", new List<string>() { "Body Harvest", "Are You Going To San Fierro?" });
-    
+	// addMissionList("BL_Cesar", new List<string>() { "Wu Zi Mu",	"Farewell, My Love" });
+	addMissionList("BL_Truth", new List<string>() { "Body Harvest" });
+    settings.Add("aygtsf", true, "Are You Going To San Fierro?", "BL_Truth");
+	settings.CurrentDefaultParent = "aygtsf";
+	settings.Add("Are You Going To San Fierro? Started", false, "Mission Started");
+	settings.Add("AYGTSF: 1 Plants Destroyed", false, "1 Plant Destroyed");
+	for (int i = 2; i <= 43; i++) {
+		settings.Add("AYGTSF: "+i+" Plants Destroyed", false, i+" Plants Destroyed");
+	}
+	settings.Add("AYGTSF: 44 Plants Destroyed", false, "All 44 Plants Destroyed");
+	settings.Add("AYGTSF: Rocket Launcher", false, "Talking to the Truth to get the RPG");
+	settings.Add("AYGTSF: Helicopter Destroyed", false, "Helicopter Destroyed");
+	settings.Add("AYGTSF: Mothership Entered", false, "Mothership Entered");
+	settings.Add("AYGTSF: Arrival at the Garage", false, "Arrival at the Garage");
+	addMissionCustom("Are You Going To San Fierro?", true, "Mission Passed");
+
+	// Wu Zi Mu
+	settings.Add("wzm", true, "Wu Zi Mu", "BL_Cesar");
+	settings.CurrentDefaultParent = "wzm";
+	settings.Add("Wu Zi Mu Started", false, "Mission Started");
+	addMissionCustom("Wu Zi Mu Starting Cutscene Ended", false, "Starting Cutscene Ended");
+	addMissionCustom("Wu Zi Mu Race Finished", false, "Race Finished");
+	addMissionCustom("Wu Zi Mu Ending Cutscene Started", false, "Ending Cutscene Started");
+	addMissionCustom("Wu Zi Mu", true, "Mission Passed");
+
+	// Farewell, My Love
+	settings.Add("fml", true, "Farewell, My Love", "BL_Cesar");
+	settings.CurrentDefaultParent = "fml";
+	settings.Add("Farewell, My Love Started", false, "Mission Started");
+	addMissionCustom("Farewell, My Love Starting Cutscene Ended", false, "Starting Cutscene Ended");
+	addMissionCustom("Farewell, My Love Race Finished", false, "Race Finished");
+	addMissionCustom("Farewell, My Love Ending Cutscene Started", false, "Ending Cutscene Started");
+	addMissionCustom("Farewell, My Love", true, "Mission Passed");
+	
 	// San Fierro
 	//-----------
 	//-----------
@@ -986,7 +1105,7 @@ startup
 
     #endregion
 
-	#region Add settings
+	#region Side Missions
 
 	// Side Missions
 	//==============
@@ -1029,13 +1148,15 @@ startup
 	//---------
 	settings.Add("TruckingMissions", true, "Trucking");
 	settings.CurrentDefaultParent = "TruckingMissions";
-	settings.Add("trucking_start", false, "Starting mission for the first time");
-	settings.SetToolTip("trucking_start", "Split when starting a trucking mission for the first time.");
-	settings.Add("trucking_leftcompound", false, "Leaving the compound");
-	settings.SetToolTip("trucking_leftcompound", "Split when driving the truck out of the compound. Useful for separating truck reset RNG from the actual mission.");
+	settings.Add("Trucking Start Header", false, "Starting mission for the first time");
+	settings.SetToolTip("Trucking Start Header", "Split when starting a trucking mission for the first time.");
+	settings.Add("Trucking Left Compound Header", false, "Leaving the compound");
+	settings.SetToolTip("Trucking Left Compound Header", "Split when driving the truck out of the compound. Useful for separating truck reset RNG from the actual mission.");
 	for (int i = 1; i <= 8; i++) {
-		settings.Add("trucking_start"+i, false, "Trucking "+i.ToString()+" - Start", "trucking_start");
-		settings.Add("trucking_leftcompound"+i, false, "Trucking "+i.ToString()+" - Leaving compound", "trucking_leftcompound");
+		settings.Add("Trucking "+i+" Started", false, "Trucking "+i.ToString()+" - Start", "Trucking Start Header");
+		settings.SetToolTip("Trucking "+i+" Started", "Split when starting a trucking mission for the first time.");
+		settings.Add("Trucking "+i+": Left Compound", false, "Trucking "+i.ToString()+" - Leaving compound", "Trucking Left Compound Header");
+		settings.SetToolTip("Trucking "+i+": Left Compound", "Split when driving the truck out of the compound. Useful for separating truck reset RNG from the actual mission.");
 		addMissionCustom("Trucking "+i, true, "Trucking "+i+" Completed");
 	}
 	settings.CurrentDefaultParent = "Missions2";
@@ -1052,17 +1173,24 @@ startup
 	settings.CurrentDefaultParent = "Missions2";
 	settings.Add("ValetMissions", true, "Valet Parking");
 	settings.CurrentDefaultParent = "ValetMissions";
-	addMission4Custom("valet_started", false, "Valet started for the first time", "ValetMissions");
-	settings.Add("valets_cars", false, "Cars");
-	for (int i = 1; i <= 5; i++) {
-		settings.Add("valet_level"+i, false, "Level "+i+" complete");
-		for (int j = i+1; j > 0; j--) {
-			var handle = "valet_level"+i+"_car"+j;
-			settings.Add(handle, false, "Level "+i+": "+j+" car"+(j==1?"":"s")+" remaining", "valets_cars");
-			settings.SetToolTip(handle, "Split when there's "+j+" cars left to park on level "+i);
+	settings.Add("valet_started", false, "Valet Started", "ValetMissions");
+	settings.Add("valet_cars", false, "Cars");
+	for (int lvl = 1; lvl <= 5; lvl++) {
+		settings.Add("valet_level"+lvl, false, "Level "+lvl+" complete");
+	}
+	var valet_levelCar = 1;
+	var valet_level = 1;
+	for (int car = 1; car <= 3+4+5+6+7; car++) {
+		var handle = "valet_car" + car;
+		var name = "Level "+valet_level+": Car "+valet_levelCar;
+		settings.Add(handle, false, name, "valet_cars");
+		valet_levelCar++;
+		if (valet_levelCar >= valet_level + 3) {
+			valet_levelCar = 1;
+			valet_level++;
 		}
 	}
-	addMissionCustom("Valet Parking", true, "Valet mission complete");
+	addMissionCustom("Valet Parking", true, "Mission Passed");
 	settings.CurrentDefaultParent = "Missions2";
 
 	// Vehicle submissions
@@ -1075,28 +1203,28 @@ startup
 	addMissionCustom("Firefighter", true, "Firefighter level 12 (Completion)");
 	settings.CurrentDefaultParent = "VehicleSubmissions";
 
-	settings.Add("freight_level", true, "Freight");
-	settings.CurrentDefaultParent = "freight_level";
-	addMission4Custom("freight_started", false, "Freight started for the first time", "freight_level");
-	settings.Add("freight_station 1 1", false, "Freight Level 1 Stop 1");
-	settings.SetToolTip("freight_station 1 1", "Split when reaching the first stop on the first level. In common 100% routes, this would be Linden Station.");
-	settings.Add("freight_station 1 2", false, "Freight Level 1 Stop 2");
-	settings.SetToolTip("freight_station 1 2", "Split when reaching the second stop on the first level. In common 100% routes, this would be Yellow Bell Station.");
-	settings.Add("freight_station 1 3", false, "Freight Level 1 Stop 3");
-	settings.SetToolTip("freight_station 1 3", "Split when reaching the third stop on the first level. In common 100% routes, this would be Cranberry Station.");
-	settings.Add("freight_station 1 4", false, "Freight Level 1 Stop 4");
-	settings.SetToolTip("freight_station 1 4", "Split when reaching the fourth stop on the first level. In common 100% routes, this would be Market Station.");
+	settings.Add("Freight Level", true, "Freight");
+	settings.CurrentDefaultParent = "Freight Level";
+	settings.Add("Freight Started", false, "Freight started for the first time", "Freight Level");
+	settings.Add("Freight Station 1 1", false, "Freight Level 1 Stop 1");
+	settings.Add("Freight Station 1 2", false, "Freight Level 1 Stop 2");
+	settings.Add("Freight Station 1 3", false, "Freight Level 1 Stop 3");
+	settings.Add("Freight Station 1 4", false, "Freight Level 1 Stop 4");
 	addMissionCustom("Freight Level 1", false, "Freight Level 1 Stop 5 (Level 1 Completion)");
-	settings.SetToolTip("Freight Level 1", "Split when reaching the fifth stop on the first level, completing the level. In common 100% routes, this would be Market Station.");
-	settings.Add("freight_station 2 1", false, "Freight Level 2 Stop 1");
-	settings.SetToolTip("freight_station 2 1", "Split when reaching the first stop on the first level. In common 100% routes, this would be Linden Station.");
-	settings.Add("freight_station 2 2", false, "Freight Level 2 Stop 2");
-	settings.SetToolTip("freight_station 2 2", "Split when reaching the second stop on the first level. In common 100% routes, this would be Yellow Bell Station.");
-	settings.Add("freight_station 2 3", false, "Freight Level 2 Stop 3");
-	settings.SetToolTip("freight_station 2 3", "Split when reaching the third stop on the first level. In common 100% routes, this would be Cranberry Station.");
-	settings.Add("freight_station 2 4", false, "Freight Level 2 Stop 4");
-	settings.SetToolTip("freight_station 2 4", "Split when reaching the fourth stop on the first level. In common 100% routes, this would be Market Station.");
+	settings.Add("Freight Station 2 1", false, "Freight Level 2 Stop 1");
+	settings.Add("Freight Station 2 2", false, "Freight Level 2 Stop 2");
+	settings.Add("Freight Station 2 3", false, "Freight Level 2 Stop 3");
+	settings.Add("Freight Station 2 4", false, "Freight Level 2 Stop 4");
 	addMissionCustom("Freight Level 2", true, "Freight Level 2 Stop 5 (Level 2 Completion)");
+	settings.SetToolTip("Freight Station 1 1", "Split when reaching the first stop on the first level. In common 100% routes, this would be Linden Station.");
+	settings.SetToolTip("Freight Station 1 2", "Split when reaching the second stop on the first level. In common 100% routes, this would be Yellow Bell Station.");
+	settings.SetToolTip("Freight Station 1 3", "Split when reaching the third stop on the first level. In common 100% routes, this would be Cranberry Station.");
+	settings.SetToolTip("Freight Station 1 4", "Split when reaching the fourth stop on the first level. In common 100% routes, this would be Market Station.");
+	settings.SetToolTip("Freight Level 1", "Split when reaching the fifth stop on the first level, completing the level. In common 100% routes, this would be Market Station.");
+	settings.SetToolTip("Freight Station 2 1", "Split when reaching the first stop on the first level. In common 100% routes, this would be Linden Station.");
+	settings.SetToolTip("Freight Station 2 2", "Split when reaching the second stop on the first level. In common 100% routes, this would be Yellow Bell Station.");
+	settings.SetToolTip("Freight Station 2 3", "Split when reaching the third stop on the first level. In common 100% routes, this would be Cranberry Station.");
+	settings.SetToolTip("Freight Station 2 4", "Split when reaching the fourth stop on the first level. In common 100% routes, this would be Market Station.");
 	settings.SetToolTip("Freight Level 2", "Split when reaching the fifth stop on the second level, completing the level and submission. In common 100% routes, this would be Market Station.");
 	settings.CurrentDefaultParent = "VehicleSubmissions";
 
@@ -1155,7 +1283,7 @@ startup
 
 	// Stadium Events
 	//---------------
-	// Max lap counts are hardcoded in here & chiliad challenge. Not very future proof, but I don't 
+	// Max lap counts are hardcoded in here & chilliad challenge. Not very future proof, but I don't 
 	// expect any SA DLC any time soon
 	settings.Add("Stadium Events", true, "Stadium Events", "Missions2");
 	settings.CurrentDefaultParent = "Stadium Events";
@@ -1223,40 +1351,43 @@ startup
 	addMissionCustom("BMX Stunt Challenge", true, "BMX Stunt Challenge Complete");	
 
 	// Chilliad Challenge
-	settings.Add("Chiliad Challenge", true, "Chiliad Challenge", "Vehicle Challenges");
-	settings.CurrentDefaultParent = "Chiliad Challenge";
-	settings.Add("Chiliad Challenge #1", true, "Scotch Bonnet Yellow Route");
-	settings.Add("Chiliad Challenge #2", true, "Birdseye Winder");
-	settings.Add("Chiliad Challenge #3", true, "Cobra Run");
-	settings.CurrentDefaultParent = "Chiliad Challenge #1";
-	settings.Add("Chiliad Challenge #1 Checkpoint 0", false, "Race start (Countdown end)");
-	for (int cp = 1; cp < 18; cp++) { // 19 32 24
-		var cpName = "Chiliad Challenge #1 Checkpoint "+cp;
+	settings.Add("Chilliad Challenge", true, "Chilliad Challenge", "Vehicle Challenges");
+	settings.CurrentDefaultParent = "Chilliad Challenge";
+	settings.Add("Chilliad Challenge #1", true, "Scotch Bonnet Yellow Route");
+	settings.Add("Chilliad Challenge #2", true, "Birdseye Winder");
+	settings.Add("Chilliad Challenge #3", true, "Cobra Run");
+	settings.CurrentDefaultParent = "Chilliad Challenge #1";
+	settings.Add("Chilliad Challenge #1 Started", false, "Countdown Start");
+	settings.Add("Chilliad Challenge #1 Checkpoint 0", false, "Countdown End");
+	for (int cp = 1; cp < 17; cp++) { // 19 32 24
+		var cpName = "Chilliad Challenge #1 Checkpoint "+cp;
 		settings.Add(cpName, false, "Checkpoint "+cp);
 	}
-	settings.Add("Chiliad Challenge #1 Checkpoint 18", false, "Checkpoint 18 (Final)");
-	settings.SetToolTip("Chiliad Challenge #1 Checkpoint 18", "Split when hitting the final checkpoint. Causes a double split when combined with the Challenge Complete setting.");
-	settings.Add("Chiliad Challenge #1 Complete", true);
+	settings.Add("Chilliad Challenge #1 Checkpoint 17", false, "Checkpoint 17 (Penultimate)");
+	settings.SetToolTip("Chilliad Challenge #1 Checkpoint 17", "Split when hitting the second-to-last checkpoint.");
+	settings.Add("Chilliad Challenge #1 Complete", true);
 	
-	settings.CurrentDefaultParent = "Chiliad Challenge #2";
-	settings.Add("Chiliad Challenge #2 Checkpoint 0", false, "Race start (Countdown end)");
-	for (int cp = 1; cp < 31; cp++) { // 19 32 24
-		var cpName = "Chiliad Challenge #2 Checkpoint "+cp;
+	settings.CurrentDefaultParent = "Chilliad Challenge #2";
+	settings.Add("Chilliad Challenge #2 Started", false, "Countdown Start");	
+	settings.Add("Chilliad Challenge #2 Checkpoint 0", false, "Countdown End");
+	for (int cp = 1; cp < 30; cp++) { // 19 32 24
+		var cpName = "Chilliad Challenge #2 Checkpoint "+cp;
 		settings.Add(cpName, false, "Checkpoint "+cp);
 	}
-	settings.Add("Chiliad Challenge #2 Checkpoint 31", false, "Checkpoint 31 (Final)");
-	settings.SetToolTip("Chiliad Challenge #2 Checkpoint 31", "Split when hitting the final checkpoint. Causes a double split when combined with the Challenge Complete setting.");
-	settings.Add("Chiliad Challenge #2 Complete", true);
+	settings.Add("Chilliad Challenge #2 Checkpoint 30", false, "Checkpoint 30 (Penultimate)");
+	settings.SetToolTip("Chilliad Challenge #2 Checkpoint 30", "Split when hitting the second-to-last checkpoint.");
+	settings.Add("Chilliad Challenge #2 Complete", true);
 
-	settings.CurrentDefaultParent = "Chiliad Challenge #3";
-	settings.Add("Chiliad Challenge #3 Checkpoint 0", false, "Race start (Countdown end)");
-	for (int cp = 1; cp < 23; cp++) { // 19 32 24
-		var cpName = "Chiliad Challenge #3 Checkpoint "+cp;
+	settings.CurrentDefaultParent = "Chilliad Challenge #3";
+	settings.Add("Chilliad Challenge #3 Started", false, "Countdown Start");	
+	settings.Add("Chilliad Challenge #3 Checkpoint 0", false, "Countdown End");
+	for (int cp = 1; cp < 22; cp++) { // 19 32 24
+		var cpName = "Chilliad Challenge #3 Checkpoint "+cp;
 		settings.Add(cpName, false, "Checkpoint "+cp);
 	}
-	settings.Add("Chiliad Challenge #3 Checkpoint 23", false, "Checkpoint 23 (Final)");
-	settings.SetToolTip("Chiliad Challenge #3 Checkpoint 23", "Split when hitting the final checkpoint. Causes a double split when combined with the Challenge Complete setting.");
-	settings.Add("Chiliad Challenge #3 Complete", true);
+	settings.Add("Chilliad Challenge #3 Checkpoint 22", false, "Checkpoint 22 (Penultimate)");
+	settings.SetToolTip("Chilliad Challenge #3 Checkpoint 22", "Split when hitting the second-to-last checkpoint.");
+	settings.Add("Chilliad Challenge #3 Complete", true);
 
 	// NRG Challenge
 	settings.Add("NRG Stunt Challenge (Header)", true, "NRG-500 Stunt Challenge", "Vehicle Challenges");
@@ -1310,7 +1441,42 @@ startup
 	settings.CurrentDefaultParent = "boatschool_level";
 	settings.Add("Boat School Started", false, "Boat School started for the first time");
 	addMissions3(6592864 + (8189 * 4), "boatschool_level");
-	addMissionCustom("Boat School", true, "Land, Sea and Air (Pilot School Passed)");
+	addMissionCustom("Boat School", true, "Land, Sea and Air (Boat School Passed)");
+	settings.CurrentDefaultParent = "Missions2";
+
+	// Properties
+	//-----------
+	// Add "Properties" before addMissions2, so Wang Cars can be added at the top
+	settings.Add("Properties", false, "Properties Bought");
+	settings.Add("Verdant Meadows (Airstrip Bought)", false, "Verdant Meadows (Airstrip Bought)", "Properties");
+	settings.Add("Wang Cars (Showroom Bought)", false, "Wang Cars (Showroom Bought)", "Properties");
+	addMissions2("Properties", false);
+	settings.CurrentDefaultParent = "Missions2";
+
+	// Import/Export
+	//--------------
+	settings.Add("Export Lists", true, "Import/Export", "Missions2");
+	foreach (var list in vars.exportLists)
+	{
+		var listNumber = list.Key+1;
+		var parent = "ExportList"+listNumber;
+		settings.Add(parent, true, "List "+listNumber, "Export Lists");
+		foreach (var item in list.Value)
+		{
+			settings.Add("Export "+item, false, item, parent);
+		}
+		var listComplete = "Export List "+listNumber;
+		settings.CurrentDefaultParent = parent;
+		// settings.Add(listComplete, false, listComplete, parent);
+		addMissionCustom(listComplete, true, listComplete+" Complete");
+	}
+	settings.Add("Exported Number", false, "Exported Vehicle Count", "Export Lists");
+	settings.CurrentDefaultParent = "Exported Number";
+	addMissionCustom("Export Number 1", false, "Exported 1 Vehicle");
+	for (int i = 2; i <= 30; i++) {
+		addMissionCustom("Export Number "+i, i==30, "Exported "+i+" Vehicles");
+	}
+	settings.CurrentDefaultParent = "Missions2";
 
 	// Ammunation Challenge
 	//---------------------
@@ -1323,6 +1489,10 @@ startup
 	//----------
 	settings.CurrentDefaultParent = "Missions2";
 	addMissions2Header("Gym Moves", true, "Gym Moves");
+
+	#endregion
+
+	#region Collectibles
 
 	// Collectibles
 	//=============
@@ -1358,6 +1528,10 @@ startup
 	}
 	settings.CurrentDefaultParent = null;
 
+	#endregion
+
+	#region Warps
+
     // Death & Busted Warps
 	//=====================
 	settings.Add("Warps", false, "Death & Busted Warps");
@@ -1368,6 +1542,7 @@ startup
 		foreach (var item2 in item.Value) {
 			var warpName = "BW '" + item.Key + "' to '" + item2 + "'";
 			settings.Add(warpName, false);
+			settings.SetToolTip(warpName, "Split when getting busted while "+item.Key+" is completed but "+item2+" is not.");
 		}
 	}
     settings.CurrentDefaultParent = "DeathWarps";
@@ -1375,9 +1550,14 @@ startup
 		foreach (var item2 in item.Value) {
 			var warpName = "DW '" + item.Key + "' to '" + item2 + "'";
 			settings.Add(warpName, false);
+			settings.SetToolTip(warpName, "Split when getting wasted while "+item.Key+" is completed but "+item2+" is not.");
 		}
 	}
 	settings.CurrentDefaultParent = null;
+
+	#endregion
+
+	#region Other
 
 	// Other
 	//======
@@ -1391,44 +1571,15 @@ startup
 	settings.SetToolTip("Plane Flight", "Splits when entering the ticket machine marker for the first time");
 	addMission4Custom("itb_grovestreethome", true, "\"Grove Street - Home\" line played", "Other");
 
-	// Properties
-	//-----------
-	// Add "Properties" before addMissions2, so Wang Cars can be added at the top
-	settings.Add("Properties", false, "Properties Bought");
-	settings.Add("Verdant Meadows (Airstrip Bought)", false, "Verdant Meadows (Airstrip Bought)", "Properties");
-	settings.Add("Wang Cars (Showroom Bought)", false, "Wang Cars (Showroom Bought)", "Properties");
-	addMissions2("Properties", false);
-	settings.CurrentDefaultParent = "Missions2";
-
-	// Import/Export
-	//--------------
-	settings.Add("Export Lists", true, "Import/Export", "Other");
-	foreach (var list in vars.exportLists)
-	{
-		var listNumber = list.Key+1;
-		var parent = "ExportList"+listNumber;
-		settings.Add(parent, true, "List "+listNumber, "Export Lists");
-		foreach (var item in list.Value)
-		{
-			settings.Add("Export "+item, false, item, parent);
-		}
-		var listComplete = "Export List "+listNumber;
-		settings.CurrentDefaultParent = parent;
-		// settings.Add(listComplete, false, listComplete, parent);
-		addMissionCustom(listComplete, true, listComplete+" Complete");
-	}
-	settings.CurrentDefaultParent = "Missions2";
-
-
 	// Gang Territories
 	//-----------------
     settings.Add("Gang Territories", false, "Gang Territories", "Other");
-	settings.SetToolTip("Gang Territories", "Splits when gang territories held stat changes to this number (during RTLS only)");
+	settings.SetToolTip("Gang Territories", "Splits when gang territories held stat changes to this number");
 	settings.CurrentDefaultParent = "Gang Territories";
 	settings.Add("Gang Territories LS", false, "During LS");
 	settings.Add("Gang Territories RTLS", false, "During RTLS");
 	settings.SetToolTip("Gang Territories LS", "Split for territories captured during LS (before The Green Sabre).");
-	settings.SetToolTip("Gang Territories RTLS", "Split for territories captured during RTLS (after Home Coming).");
+	settings.SetToolTip("Gang Territories RTLS", "Split for territories captured during RTLS (after Vertical Bird).");
     for (int i = 1; i <= 379; i++) 
     {
         string nameLS = "GT " + i;
@@ -1473,8 +1624,41 @@ startup
 		settings.Add("gf_"+gfName.ToLower()+"_maxed", false, gfName + " max progress (outfit unlocked)", gfName);
 	}
 
-    // More
-    //=====
+	#endregion
+
+    // Non-Linear Split Skipping
+    //==========================
+	
+	settings.CurrentDefaultParent = null;
+	settings.Add("Split Skipping", false);
+	settings.SetToolTip("Split Skipping", "Skip splits for sections that may deviate from the most optimal order. Eg. due to bad luck in a non-linear segment.");
+	settings.CurrentDefaultParent = "Split Skipping";
+	
+	// settings.Add("LS_NonLinear_100", false, "100% Time Dependent Grove Street Missions");
+	// settings.SetToolTip("LS_NonLinear_100", "A block of missions towards the end of Los Santos involving many time of day locked missions. Select the preferred route (only one) to enable skipping on other routes.");
+	settings.Add("NonLinear GI LS HP C RUS RTF", false, "Route: GI > LS > HP > C > RUS > RTF");
+	settings.SetToolTip("NonLinear GI LS HP C RUS RTF", 
+		"Gray Imports -> Los Sepulcros -> House Party -> Catalyst -> Robbing Uncle Sam -> Reuniting the Families.\n" +
+		"Skip splits until Reuniting the Families if Los Sepulcros is not done immediately after Gray Imports.\n" +
+		"Skipping starts upon starting either House Party or Catalyst instead of Los Sepulcros.\n" +
+		"Regular splitting continues upon starting Reuniting the Families."
+	);
+	// settings.Add("LS_NonLinear_100_CatalystFirst", false, "Catalyst after Gray Imports", "LS_NonLinear_100");
+	// settings.SetToolTip("LS_NonLinear_100_CatalystFirst", 
+	// 	"Skip splits until Reuniting the Families if Catalyst is not done immediately after Gray Imports.\n" +
+	// 	"Gray Imports -> Catalyst -> House Party -> Robbing Uncle Sam -> Los Sepulcros -> Reuniting the Families.\n" +
+	// 	"Skipping starts upon starting either House Party or Los Sepulcros instead of Catalyst.\n" +
+	// 	"Regular splitting continues upon starting Reuniting the Families."
+	// );
+
+	// // settings.Add("D_NonLinear_100", false, "100% Taxi & Exports");
+	// // settings.SetToolTip("D_NonLinear_100", "Select the preferred route (only one) to enable skipping in cases of bad car RNG.");
+	// settings.Add("NonLinear Slamvan Taxi", false, "Route: Slamvan before Taxi Driver");
+	// settings.SetToolTip("NonLinear Slamvan Taxi",
+	// 	"Skip splits if Taxi Driver is started before a Slamvan is delivered.\n" +
+	// 	"Skipping starts upon starting Taxi Driver without having delivered a Slamvan.\n" +
+	// 	"Regular splitting continues upon dropping off another fare or starting Interdiction after delivering a Slamvan."
+	// );
 
 	// Other Settings
 	//===============
@@ -1493,8 +1677,6 @@ startup
 	settings.SetToolTip("doubleSplitPrevention",
         @"Impose cooldown of 2.5s between auto-splits.
 This may not work for all types of splits.");
-
-	#endregion
 
 	//=============================================================================
 	// Other Stuff
@@ -1665,8 +1847,9 @@ init
 	
 	// Add global variables for mid-mission events
 	vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(6592864 + (802 * 4)+offset)) { Name = "100%_achieved" }); // $_100_PERCENT_COMPLETE
-	vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(6592864 + (1799 * 4)+offset)) { Name = "chiliad_race" });
-	vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(6592864 + (1801 * 4)+offset)) { Name = "chiliad_done" }); // $MISSION_CHILIAD_CHALLENGE_PASSED
+	vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(6592864 + (7011 * 4)+offset)) { Name = "aygtsf_plantsremaining" });
+	vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(6592864 + (1799 * 4)+offset)) { Name = "chilliad_race" });
+	vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(6592864 + (1801 * 4)+offset)) { Name = "chilliad_done" }); // $MISSION_CHILIAD_CHALLENGE_PASSED
 	vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(6592864 + (189 * 4)+offset)) { Name = "courier_active" }); // $ONMISSION_COURIER
 	vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(6592864 + (8014 * 4)+offset)) { Name = "eotlp3_chase" });
 	vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(6592864 + (359 * 4)+offset)) { Name = "gf_denise_progress" }); // $GIRL_PROGRESS[0]
@@ -1681,39 +1864,50 @@ init
 	vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(6592864 + (1510 * 4)+offset)) { Name = "intro_newgamestarted" });
 	vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(6592864 + (5353 * 4)+offset)) { Name = "intro_state" });
 	vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(6592864 + (352 * 4)+offset)) { Name = "race_index" });
+	vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(6592864 + (169 * 4)+offset)) { Name = "r_onmission" });
+	vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(6592864 + (676 * 4)+offset)) { Name = "r_hairchanged" });
+	vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(6592864 + (1514 * 4)+offset)) { Name = "r_failed" });
 	vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(6592864 + (10933 * 4)+offset)) { Name = "valet_carstopark" });
+	vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(6592864 + (1848 * 4)+offset)) { Name = "valet_carsparked" });
 	vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(6592864 + (247 * 4)+offset)) { Name = "schools_currentexercise" }); 
 	vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(6592864 + (726 * 4)+offset)) { Name = "stunt_type" }); // $STUNT_MISSION_TYPE
 	vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(6592864 + (8267 * 4)+offset)) { Name = "stunt_timer" });
+	// vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(6592864 + (1883 * 4)+offset)) { Name = "valet_started" }); // Gets set during 555 we tip, could be useful to track its progress
 
 	// Local variables. These are used across multiple missions and it's hard to tell which without just testing it
+	vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(0x55EE68+offset)) { Name = "ctb_checkpoint1" });
+	vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(0x57F10C+offset)) { Name = "ctb_checkpoint2" });
+
 	vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(0x648A00+offset)) { Name = "r_dialogueblock" }); // 40@
 	vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(0x648A18+offset)) { Name = "bs_dialogueblock" }); // 46@
 	vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(0x648A38+offset)) { Name = "g4l_territory2" }); // 54@
 	vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(0x648A40+offset)) { Name = "g4l_drivetoidlewood" }); // 56@
 	vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(0x648A48+offset)) { Name = "g4l_territory1" }); // 58@
 	vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(0x648A4C+offset)) { Name = "stunt_checkpoint" }); //59@
-
-	vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(0x649518+offset)) { Name = "chiliad_checkpoints" }); 
+	vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(0x648ABC+offset)) { Name = "aygtsf_progress" }); //87@
+	vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(0x648AF0+offset)) { Name = "tgs_chapter" }); //100@
+	vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(0x648B08+offset)) { Name = "trucking_leftcompound" }); 
+	vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(0x648B68+offset)) { Name = "freight_stations" }); 
+	vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(0x648BBC+offset)) { Name = "aygtsf_dialogue" }); //151@
+	vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(0x648D64+offset)) { Name = "races_flycheckpoint" }); 
+	vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(0x648D70+offset)) { Name = "races_badlandscheckpoint" }); 
+	vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(0x648D74+offset)) { Name = "lossep_homiesrecruited" }); 
+	vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(0x648D78+offset)) { Name = "races_checkpoint" }); 
+	vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(0x648D90+offset)) { Name = "races_stadiumcheckpoint" }); 
+	vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(0x648DD8+offset)) { Name = "lossep_cardoorsunlocked" }); 
+	vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(0x6491B8+offset)) { Name = "lossep_dialogue" }); 
+	vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(0x64950C+offset)) { Name = "chilliad_checkpoints3" }); 
+	vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(0x649518+offset)) { Name = "chilliad_checkpoints" }); 
 	vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(0x649534+offset)) { Name = "courier_checkpoints" }); 
 	vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(0x649544+offset)) { Name = "courier_levels" }); 
 	vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(0x649700+offset)) { Name = "courier_city" }); 
-	vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(0x55EE68+offset)) { Name = "ctb_checkpoint1" });
-	vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(0x57F10C+offset)) { Name = "ctb_checkpoint2" });
-	vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(0x648B68+offset)) { Name = "freight_stations" }); 
-    vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(0x7791D0+offset)) { Name = "gang_territories" });
-	vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(0x648D78+offset)) { Name = "races_checkpoint" }); 
-	vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(0x648D70+offset)) { Name = "races_badlandscheckpoint" }); 
-	vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(0x648D64+offset)) { Name = "races_flycheckpoint" }); 
-	vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(0x648D90+offset)) { Name = "races_stadiumcheckpoint" }); 
+
+	// vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(0x68EF54+offset)) { Name = "valet_level" }); 
 	vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(0x691424+offset)) { Name = "races_laps" }); 
-	vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(0x648B08+offset)) { Name = "trucking_leftcompound" }); 
-	vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(0x68F3B4+offset)) { Name = "valet_level" }); 
+    vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(0x7791D0+offset)) { Name = "gang_territories" });
 
 	// Add global variables that aren't exclusive to one (type of) mission
-	// $1276 used in the $A_CONT and $A_ALAP threads. Something to do with playing audio. 
-	// Used in MANSON5, MANSIO1, CASINO9, CASINO6, CASINO5, WUZI2, INTRO
-	// vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(6592864 + (1276 * 4)+offset)) { Name = "alap_sound" });
+	vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(6592864 + (43 * 4)+offset)) { Name = "interior" });
 
 	// This means loading from a save and such, not load screens (this doesn't work with Steam since I couldn't find the address for it)
 	vars.watchers.Add(new MemoryWatcher<bool>(new DeepPointer(loadingAddr)) { Name = "loading" });
@@ -1723,19 +1917,6 @@ init
 	vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(playingTimeAddr)) { Name = "playingTime" });
 	vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(startAddr)) { Name = "started" });
 	vars.watchers.Add(new StringWatcher(new DeepPointer(threadAddr, 0x8), 10) { Name = "thread" });
-
-
-	// Weird variables
-	//================
-
-	// $2332 or $CARMOD_DISABLED_FLAG gets set to 1 during the following missions:
-	// Burning Desire, Home Invasion, Races, Architectural Espionage, 
-	// Breaking the Bank at Caligula's, Burglaries. 
-	vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(6592864 + (2332 * 4)+offset)) { Name = "carmod_disabled_flag" });
-	// $10493 is set to 1 at the start of a race and 0 at the end. It also gets set by
-	// Explosive Situation, the only other mission to do this. Its purpose is to disable
-	// entering cranes. 
-	vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(6592864 + (10493 * 4)+offset)) { Name = "on_race_or_explosive_situation" });
 	
 	// Collectibles
 	//=============
@@ -1952,6 +2133,7 @@ update
 			vars.split.Clear();
 			vars.splitBuffer.Clear();
 			vars.lastStartedMission = "";
+			vars.skipSplits = false;
 			vars.DebugOutput("Cleared list of already executed splits");
 		}
 		vars.PrevPhase = timer.CurrentPhase;
@@ -1962,6 +2144,7 @@ update
 
 split
 {
+	#region Split prevention
 	//=============================================================================
 	// Split prevention
 	//=============================================================================
@@ -1985,7 +2168,9 @@ split
 		vars.DebugOutput("Done waiting..");
 		vars.waiting = false;
 	}
+	#endregion
 
+	#region Splits
 	//=============================================================================
 	// Splits
 	//=============================================================================
@@ -1997,6 +2182,7 @@ split
 		if (value.Current > value.Old && item.Value.ContainsKey(value.Current)) {
 			string splitId = item.Value[value.Current];
 			vars.TrySplit(splitId);
+			vars.lastStartedMission = "None";
 		}
 	}
 
@@ -2009,6 +2195,7 @@ split
 			if (value.Current > 0 && value.Old == 0)
 			{
 				vars.TrySplit(m.Value);
+				vars.lastStartedMission = "None";
 			}
 		}
 	}
@@ -2057,17 +2244,21 @@ split
 			{
 				vars.lastStartedMission = item.Key;
 				vars.TrySplit(item.Value);
+				break;
 			}
 		}
 		foreach (var item in vars.startMissions2)
 		{
-			if (thread.Current == item.Key)
+			if (thread.Current == item)
 			{
-				vars.lastStartedMission = item.Key;
+				vars.lastStartedMission = item;
+				break;
 			}
 		}
 	}
 
+	var interior = vars.watchers["interior"];
+	var interiorChanged = interior.Current != interior.Old;
 	// Mid-Mission Events
 	//===================
 	//===================
@@ -2076,8 +2267,35 @@ split
 	// or local variables that require special attention.
 	#region mission events
 
+	#region Are You Going To San Fierro?
+	//==================================
+	// aygtsf_progress reaches 1 when all plants are destroyed. Redundant because we're already counting the plants
+	if (vars.lastStartedMission == "truth2") {
+		var aygtsf_plantsremaining = vars.watchers["aygtsf_plantsremaining"];
+		if (aygtsf_plantsremaining.Current != aygtsf_plantsremaining.Old && aygtsf_plantsremaining.Current != 44) {
+			for (int i = aygtsf_plantsremaining.Old; i > aygtsf_plantsremaining.Current; i--) {
+				var aygtsf_plants = 45 - i;
+				vars.TrySplit("AYGTSF: " + aygtsf_plants + " Plants Destroyed");
+			}
+		}
+		var aygtsf_dialogue = vars.watchers["aygtsf_dialogue"];
+		if (aygtsf_dialogue.Current == 8 && aygtsf_dialogue.Old != 8) {
+			vars.TrySplit("AYGTSF: Rocket Launcher");
+		}
+		var aygtsf_progress = vars.watchers["aygtsf_progress"];
+		if (aygtsf_progress.Current == 2 && aygtsf_progress.Old < 2) {
+			vars.TrySplit("AYGTSF: Helicopter Destroyed");
+		}
+		if (aygtsf_progress.Current == 3 && aygtsf_progress.Old == 2) {
+			vars.TrySplit("AYGTSF: Mothership Entered");
+		}
+		if (aygtsf_progress.Current == 5 && aygtsf_progress.Old < 5) {
+			vars.TrySplit("AYGTSF: Arrival at the Garage");
+		}
+	}
+	#endregion
 	#region Big Smoke
-	//==========
+	//===============
 	// Dialogue block
 	// 0: You wanna drive?
 	// 1: Ballas! Drive by! Incoming!
@@ -2090,31 +2308,41 @@ split
 	if (bs_dialogueblock.Current != bs_dialogueblock.Old) {
 		if (vars.lastStartedMission == "intro1" && !vars.Passed("Big Smoke")) {
 			if (bs_dialogueblock.Current == 3 && bs_dialogueblock.Old == 4) {
-				vars.TrySplit("bs_parkinglotcutscenestart");
+				vars.TrySplit("Big Smoke: Parking Lot Cutscene Start");
 			}
 			if (bs_dialogueblock.Current == 6 && bs_dialogueblock.Old == 3) {
-				vars.TrySplit("bs_parkinglotcutsceneend");
+				vars.TrySplit("Big Smoke: Parking Lot Cutscene End");
 			}
 			else if (bs_dialogueblock.Current == 2 && (bs_dialogueblock.Old == 5 || bs_dialogueblock.Old == 6)) {
-				vars.TrySplit("bs_grovestreet");
+				vars.TrySplit("Big Smoke: Grove Street Reached");
 			}
 		}
 	}
 	#endregion
-	#region Chiliad Challenge
+	#region Chilliad Challenge
 	//==================
-	// "chiliad_race" contains the next race to be started (1-3), but also repeats
+	// "chilliad_race" contains the next race to be started (1-3), but also repeats
 	// when you do the races again (changes to 1 on finishing the last race).
-	// "chiliad_done" changes from 0 to 1 when all races have been done.
-	//
-	var chiliad_race = vars.watchers["chiliad_race"];
-	if (chiliad_race.Current != chiliad_race.Old) {
-		vars.TrySplit("Chiliad Challenge #"+chiliad_race.Old+" Complete");
+	// "chilliad_done" changes from 0 to 1 when all races have been done.
+	// current race gets set before current checkpoint. This causes a glitch where finishing race 1 will also trigger CP 18 of race 2.
+	// Using else if instead of just if seems to remedy this.
+	var chilliad_race = vars.watchers["chilliad_race"];
+	if (threadChanged && thread.Current == "mtbiker") {
+		vars.TrySplit("Chilliad Challenge #"+chilliad_race.Current+" Started");
+	}	
+	var chilliad_checkpoints = vars.watchers["chilliad_checkpoints"];
+	var chilliad_checkpoints3 = vars.watchers["chilliad_checkpoints3"];
+	if (chilliad_race.Current != chilliad_race.Old) {
+		vars.TrySplit("Chilliad Challenge #"+chilliad_race.Old+" Complete");
 	}
-	var chiliad_checkpoints = vars.watchers["chiliad_checkpoints"];
-	if (chiliad_checkpoints.Current > chiliad_checkpoints.Old) {
-		if (vars.lastStartedMission == "mtbiker") {
-			vars.TrySplit("Chiliad Challenge #"+chiliad_race.Current+" Checkpoint "+chiliad_checkpoints.Current);
+	else if (chilliad_checkpoints.Current > chilliad_checkpoints.Old) {
+		if (vars.lastStartedMission == "mtbiker" && chilliad_race.Current != 3) {
+			vars.TrySplit("Chilliad Challenge #"+chilliad_race.Current+" Checkpoint "+chilliad_checkpoints.Old);
+		}
+	}
+	else if (chilliad_checkpoints3.Current > chilliad_checkpoints3.Old) {
+		if (vars.lastStartedMission == "mtbiker" && chilliad_race.Current == 3) {
+			vars.TrySplit("Chilliad Challenge #"+chilliad_race.Current+" Checkpoint "+chilliad_checkpoints3.Old);
 		}
 	}
 	#endregion
@@ -2143,10 +2371,7 @@ split
 	}
 	#endregion
 	#region Cut Throat Business
-	//====================
-	// CTB uses some sort of audio thread that gets loaded after MANSON5. So we need to have some
-	// additional checks to really confirm we're on this mission, as there can be missions in between
-	// Home Coming and CTB as well.
+	//=========================
 	var ctb_checkpoint1 = vars.watchers["ctb_checkpoint1"];
 	if (ctb_checkpoint1.Current > ctb_checkpoint1.Old && ctb_checkpoint1.Old == 0) {
 		if (vars.lastStartedMission == "manson5" && !vars.Passed("Cut Throat Business")) {
@@ -2177,12 +2402,12 @@ split
 	var freight_stations = vars.watchers["freight_stations"];
 	if (freight_stations.Current > freight_stations.Old && freight_stations.Current < 5) {
 		// Do a check we're actually on Freight, since this is a local variable used for multiple missions
-		if (vars.Passed("freight_started")) {
+		if (vars.lastStartedMission == "freight") {
 			var freightlevel = "1 ";
 			if (vars.Passed("Freight Level 1")) {
 				freightlevel = "2 ";
 			}
-			var splitName = "freight_station " + freightlevel + freight_stations.Current;
+			var splitName = "Freight Station " + freightlevel + freight_stations.Current;
 			vars.TrySplit(splitName);
 		}
 	}
@@ -2192,7 +2417,7 @@ split
     // Gang Territories as tracked by the "Territories Held" stat.
     var gangTerritoriesHeld = vars.watchers["gang_territories"];
     if (gangTerritoriesHeld.Current > gangTerritoriesHeld.Old) {
-    	if (vars.Passed("Home Coming")) {
+    	if (vars.Passed("Vertical Bird")) {
             var territoriesHeld = gangTerritoriesHeld.Current;
             vars.TrySplit("GangTerritoryRTLS" + territoriesHeld);
         }
@@ -2203,7 +2428,7 @@ split
     }
 	#endregion
 	#region Grove 4 Life
-	//=============
+	//==================
 	var g4l_drivetoidlewood = vars.watchers["g4l_drivetoidlewood"];
 	var g4l_territory1 = vars.watchers["g4l_territory1"];
 	var g4l_territory2 = vars.watchers["g4l_territory2"];
@@ -2286,7 +2511,7 @@ split
 	}
 	#endregion
 	#region Kickstart
-	//==========
+	//===============
 	var kickstart_checkpoints = vars.watchers["kickstart_checkpoints"];
 	var kickstart_points = vars.watchers["kickstart_points"];
 	if (kickstart_checkpoints.Current > kickstart_checkpoints.Old) {
@@ -2296,20 +2521,67 @@ split
 		vars.TrySplit("Kickstart Points 26");
 	}
 	#endregion
+	#region Los Sepulcros
+	//===================
+	// lossep_homiesrecruited -> Number of homies recruited in the mission. Includes optional homies.
+	// lossep_cardoorsunlocked -> Set to 1 when the two obligatory homies are recruited. Set to 2 at various later points.
+	// lossep_dialogue ->
+	// 1 = We gonna need some allies
+	// 23 = We're gonna round back to Los Sepulcros and sneak over the wall
+	// 	35 = Kane? Ain't that cap front yard royalty?
+	// 	36 = Yeah so if there's a hint of trouble, he's a no show.
+	// 29 = This is it (Sweet and homies getting out the car to jump over the wall)
+	// 34 = Y'all take up positions and wait for Kane
+	// 40 = Here he comes
+	// 67 = Nice one CJ
+	// 	68 = I'll get us a getaway car, you guys take out the rest of those ballas
+	// 69 = Okay everybody in let's roll
+	// 70 = Man we was a force back there
+	// 	71 = Everybody go home, we aint seen each other all day. Copy?
+	// 	72 = I'll catch you later CJ
+	if (vars.lastStartedMission == "sweet7") {
+		var lossep_homiesrecruited = vars.watchers["lossep_homiesrecruited"];
+		var lossep_cardoorsunlocked = vars.watchers["lossep_cardoorsunlocked"];
+		var lossep_dialogue = vars.watchers["lossep_dialogue"];
+		if (lossep_homiesrecruited.Old == 0 && lossep_homiesrecruited.Current == 1) {
+			vars.TrySplit("Los Sepulcros: One Homie Recruited");
+		}
+		if (lossep_cardoorsunlocked.Old == 1 && lossep_cardoorsunlocked.Current > 0) {
+			vars.TrySplit("Los Sepulcros: Two Homies Recruited");
+		}
+		if (lossep_dialogue.Old != 1 && lossep_dialogue.Current == 1) {
+			vars.TrySplit("Los Sepulcros: Intro Cutscene End");
+		}
+		if (lossep_dialogue.Old != 23 && lossep_dialogue.Current == 23) {
+			vars.TrySplit("Los Sepulcros: Homies Entered Car");
+		}
+		if (lossep_dialogue.Old != 29 && lossep_dialogue.Current == 29) {
+			vars.TrySplit("Los Sepulcros: Arrival at the Cemetery");
+		}
+		if (lossep_dialogue.Old != 34 && lossep_dialogue.Current == 34) {
+			vars.TrySplit("Los Sepulcros: Wall Climbed");
+		}
+		if (lossep_dialogue.Old != 40 && lossep_dialogue.Current == 40) {
+			vars.TrySplit("Los Sepulcros: Kane Arrived");
+		}
+		if (lossep_dialogue.Old != 67 && lossep_dialogue.Current == 67) {
+			vars.TrySplit("Los Sepulcros: Kane Dead");
+		}
+		if (lossep_dialogue.Old != 69 && lossep_dialogue.Current == 69) {
+			vars.TrySplit("Los Sepulcros: Escape Vehicle Entered");
+		}
+		if (lossep_dialogue.Old != 70 && lossep_dialogue.Current == 70) {
+			vars.TrySplit("Los Sepulcros: Arrival at Grove Street");
+		}
+	}
+
+	#endregion
 	#region Races
-	//======
+	//===========
 	// Split for each checkpoint
-	// races_checkpoint is your checkpoint count, except for during stadium events, where it
-	// the CP count of some random opponent. Yours is races_stadiumcheckpoint. For some reason
-	// fly races have a separate checkpoint counter.
-	// We need to first make sure we are on a race. These two variables are shared with other
-	// missions, but the combination of the two only happens during races. I'm not sure if we
-	// can just use thread start var for this. Races go all over the map and there might be
-	// hidden funny stuff. Also not sure how that works with Cesar's race missions.
-	var on_race_or_explosive_situation = vars.watchers["on_race_or_explosive_situation"];
-	var carmod_disabled_flag = vars.watchers["carmod_disabled_flag"];
-	if (carmod_disabled_flag.Current == 1 && on_race_or_explosive_situation.Current == 1) {
-		var race_index = vars.watchers["race_index"];
+	// which variable is your cp count depends on the number of opponents in the races.
+	var race_index = vars.watchers["race_index"];
+	if (vars.lastStartedMission == "cprace" || vars.lastStartedMission == "bcesar4" || vars.lastStartedMission == "cesar1") {
 		if (race_index.Current == 7 || race_index.Current == 8) {
 			// Badlands A & B
 			var races_badlandscheckpoint = vars.watchers["races_badlandscheckpoint"];
@@ -2353,25 +2625,50 @@ split
 	}
 	#endregion
 	#region Ryder
-	//======
+	//===========
+	// Dialogue Block:
 	// 0 - Hey, old Reece still run the barber shop?
 	// 1 - Man, what's this? Shit look ridiculous
 	// 2 - Give up the money. This a raid
 	// 3 - Better drop by and see Sweet
 	// 4 - What you waiting for fool?
+	// r_OnMission is set to 1 after Dialogue's "show me how they drive on the east coast" line
+	// and is a reliable way of telling we're past the intro cutscene.
+	var r_failed = vars.watchers["r_failed"];
+	if (r_failed.Current > r_failed.Old) {
+		vars.TrySplit("r_failed");
+	}
+	if (threadChanged && thread.Current == "intro2" && r_failed.Current > 0) {
+		vars.TrySplit("r_restarted");
+	}
 	var r_dialogueblock = vars.watchers["r_dialogueblock"];
-	if (r_dialogueblock.Current != r_dialogueblock.Old) {
-		if (vars.lastStartedMission == "intro2" && !vars.Passed("Ryder")) {
-			if (r_dialogueblock.Current == 1 && r_dialogueblock.Old == 0) {
-				vars.TrySplit("r_barbershopleft");
+	if (vars.lastStartedMission == "intro2") {
+		if (r_dialogueblock.Current != r_dialogueblock.Old) {
+			if (!vars.Passed("Ryder")) {
+				if (r_dialogueblock.Current == 1 && r_dialogueblock.Old == 0) {
+					vars.TrySplit("r_barbershopleft");
+				}
+				else if (r_dialogueblock.Current == 2 && r_dialogueblock.Old == 1) {
+					vars.TrySplit("r_pizzabought");
+				}
+				else if (r_dialogueblock.Current == 4 && r_dialogueblock.Old == 2) {
+					vars.TrySplit("r_pizzashopleft");
+				}
+				else if (r_dialogueblock.Current == 3 && r_dialogueblock.Old == 4) {
+					vars.TrySplit("r_arrivingathishouse");
+				}
 			}
-			// 1 > 2 = pizza bought, current thread "skbrain". Just includes the robbery cutscene
-			else if (r_dialogueblock.Current == 4 && r_dialogueblock.Old == 2) {
-				vars.TrySplit("r_pizzashopleft");
-			}
-			else if (r_dialogueblock.Current == 3 && r_dialogueblock.Old == 4) {
-				vars.TrySplit("r_arrivingathishouse");
-			}
+		}
+		var r_hairchanged = vars.watchers["r_hairchanged"];
+		var r_onmission = vars.watchers["r_onmission"];
+		if (r_hairchanged.Current != r_hairchanged.Old && r_hairchanged.Current == 1) {
+			vars.TrySplit("r_hairchanged");
+		}
+		if (interiorChanged && interior.Current == 2 && vars.lastStartedMission == "intro2" && r_onmission.Current == 1) {
+			vars.TrySplit("r_barberentered");
+		}
+		if (interiorChanged && interior.Current == 5 && vars.lastStartedMission == "intro2" && r_onmission.Current == 1) {
+			vars.TrySplit("r_pizzashopentered");
 		}
 	}
 	#endregion
@@ -2415,7 +2712,7 @@ split
 			var name = "BMX Stunt";
 			if (stunt_type == 1) { name = "NRG Stunt"; }
 			vars.TrySplit(name + "0");
-			if (stunt_type == 1 && vars.Passed("Export List 3")) {
+			if (stunt_type == 1 && vars.Passed("Export Number 30")) {
 				vars.TrySplit(name+"0AfterExport");
 			}
 		}
@@ -2430,36 +2727,108 @@ split
 		}
 	}
 	#endregion
+	#region The Green Sabre
+	// ====================
+	// 1 = Initial cutscene
+	// 2 = Cesar's phone call
+	// 3 = Entered Bravura
+	// 4 = Exiting Bravura
+	// 5 = Sweet Dying Cutscene
+	// 6 = Combat
+	// 7 = Cops arrive at the parking lot
+	// 8 = You got a bag over your head boy
+	var tgs_chapter = vars.watchers["tgs_chapter"];
+	if (tgs_chapter.Current > tgs_chapter.Old) {
+		if (vars.lastStartedMission == "la1fin2" && !vars.Passed("The Green Sabre")) {
+			switch ((int)tgs_chapter.Current) {
+				case 2: 
+					vars.TrySplit("The Green Sabre: End of initial cutscene");
+					break;
+				case 3:
+					vars.TrySplit("The Green Sabre: Entered the Bravura");
+					break;
+				case 4:
+					vars.TrySplit("The Green Sabre: Exiting the Bravura");
+					break;
+				case 5:
+					vars.TrySplit("The Green Sabre: Arriving at the parking lot");
+					break;
+				case 6:
+					vars.TrySplit("The Green Sabre: Parking lot shootout start");
+					break;
+				case 7:
+					vars.TrySplit("The Green Sabre: Parking lot shootout end");
+					break;
+				case 8:
+					vars.TrySplit("The Green Sabre: Start of cutscene with Tenpenny");
+					break;
+				default:
+					break;
+			}
+		}
+	}
+	#endregion
 	#region Trucking
 	//=========
 	// Start & Leaving the compound
 	var trucking_current = vars.watchers[0x6518DC.ToString()].Current + 1;
 	if (threadChanged && thread.Current == "truck") {
-		var splitName = "trucking_start"+trucking_current;
+		var splitName = "Trucking "+trucking_current+" Started";
 		vars.TrySplit(splitName);
 	}
 	else if (vars.lastStartedMission == "truck") {
 		var trucking_leftcompound = vars.watchers["trucking_leftcompound"];
 		if (trucking_leftcompound.Current > trucking_leftcompound.Old) {
-			var splitName = "trucking_leftcompound"+trucking_current;
+			var splitName = "Trucking "+trucking_current+": Left Compound";
 			vars.TrySplit(splitName);
 		}
 	}
 	#endregion
 	#region Valet Parking
-	//==============
+	//===================
 	// Levels
-	var valet_level = vars.watchers["valet_level"];
-	if (valet_level.Current > valet_level.Old && valet_level.Old != 0) {
-		if (vars.lastStartedMission == "valet") {
-			var splitName = "valet_level" + valet_level.Old;
+	// var valet_level = vars.watchers["valet_level"];
+	// if (valet_level.Current > valet_level.Old && valet_level.Old != 0) {
+	// 	if (thread.Current == "valet") {
+	// 		var splitName = "valet_level" + valet_level.Old;
+	// 		vars.TrySplit(splitName);
+	// 	}
+	// }
+	var valet_carstopark = vars.watchers["valet_carstopark"];
+	var valet_carsparked = vars.watchers["valet_carsparked"];
+	// if (thread.Current == "valet") {
+		if (valet_carstopark.Old == 0 && valet_carstopark.Current == 3) {
+			vars.TrySplit("valet_started");
+		}
+		if (valet_carstopark.Old == 1 && valet_carstopark.Current == 4) {
+			vars.TrySplit("valet_level1");
+		}
+		if (valet_carstopark.Old == 1 && valet_carstopark.Current == 5) {
+			vars.TrySplit("valet_level2");
+		}
+		if (valet_carstopark.Old == 1 && valet_carstopark.Current == 6) {
+			vars.TrySplit("valet_level3");
+		}
+		if (valet_carstopark.Old == 1 && valet_carstopark.Current == 7) {
+			vars.TrySplit("valet_level4");
+		}
+		if (valet_carstopark.Old == 1 && valet_carstopark.Current == 8) {
+			vars.TrySplit("valet_level5");
+		}
+		if (valet_carsparked.Current > valet_carsparked.Old) {
+			var splitName = "valet_car" + valet_carsparked.Current;
 			vars.TrySplit(splitName);
 		}
+	// }
+	#endregion
+	#region Wu Zi Mu / Farewell, My Love
+	//=================================
+	if (threadChanged && thread.Current == "bcesar4" && !vars.Passed("Wu Zi Mu")) {
+		vars.TrySplit("Wu Zi Mu Started");
 	}
-	var valet_carstopark = vars.watchers["valet_carstopark"];
-	if (valet_carstopark.Current < valet_carstopark.Old && valet_carstopark.Current != 0 && valet_carstopark.Old != 0) {
-		var splitName = "valet_level" + valet_level.Current + "_car" + valet_carstopark.Current;
-		vars.TrySplit(splitName);
+	if (race_index.Current == 8 && race_index.Old == 7 && !vars.Passed("Farewell, My Love")) {
+		// If parking in the marker and starting FML during the fadein of WZM, currentthread will never change, so we have to detect its start like this
+		vars.TrySplit("Farewell, My Love Started");
 	}
 	#endregion
 
@@ -2546,36 +2915,66 @@ split
 	//=================
 	var pedStatus = vars.watchers["pedStatus"];
 	if (pedStatus.Current != pedStatus.Old) {
-		if (pedStatus.Current == 63) // Busted
+		var warpSplit = false;
+		if (!warpSplit && pedStatus.Current == 63) // Busted
 		{
 			foreach (var item in vars.bustedWarps) {
 				if (vars.Passed(item.Key)) {
 					foreach (var item2 in item.Value) {
 						if (!vars.Passed(item2)) {
 							vars.TrySplit("BW '" + item.Key + "' to '" + item2 + "'");
+							warpSplit = true;
+							break;
 						}
 					}
+					if (warpSplit) break;
 				}
 			}
 		}
-		if (pedStatus.Current == 55) // Wasted
+		if (!warpSplit && pedStatus.Current == 55) // Wasted
 		{
 			foreach (var item in vars.deathWarps) {
 				if (vars.Passed(item.Key)) {
 					foreach (var item2 in item.Value) {
 						if (!vars.Passed(item2)) {
 							vars.TrySplit("DW '" + item.Key + "' to '" + item2 + "'");
+							warpSplit = true;
+							break;
 						}
 					}
+					if (warpSplit) break;
 				}
 			}
+		}
+	}
+	#endregion
+
+	// Skip splits
+	if (settings["NonLinear GI LS HP C RUS RTF"] && threadChanged) {
+		if ((thread.Current == "ryder3") || (thread.Current == "music5" && vars.Passed("House Party (Cutscene)"))) {
+			if (!vars.Passed("Los Sepulcros") && vars.Passed("Gray Imports")) {
+				// Started House Party or Catalyst before Los Sepulcros. Stop splitting and skip instead.
+				vars.skipSplits = true;
+				vars.DebugOutput("Start skipping splits: Deviation from route GI->LS->HP->C->RUS->RTF");
+			}
+		}
+		if (thread.Current == "drugs4") {
+			// Start splitting again on Reuniting The Families
+			vars.skipSplits = false;
+			vars.DebugOutput("End skipping splits");
 		}
 	}
 
 	// Split
 	if (vars.splitBuffer.Count > 0) {
 		vars.splitBuffer.RemoveAt(0);
-		return true;
+		if (vars.skipSplits) {
+			vars.DebugOutput("Skipping split");
+			vars.timerModel.SkipSplit();
+		}
+		else {
+			return true;
+		}
 	}
 }
 
