@@ -15,8 +15,13 @@
 // Time is tracked in MS
 
 // If non-supported version, defaults to the top one in these states. So put these in order newest -> oldest.
+state("AoE2DE_s", "104954") {
+	int gameTimer : "AoE2DE_s.exe", 0x03DF6F84; 		// "AoE2DE_s.exe"+03DF6F84
+	int gameState : "AoE2DE_s.exe", 0x03E6DEA8, 0x5E8;	// "AoE2DE_s.exe"+03E6DEA8 +5E8	
+}
+
 state("AoE2DE_s", "93001") {
-	int gameTimer : "AoE2DE_s.exe", 0x03CF6A74; 		// "AoE2DE_s.exe"+3CF6A74
+	int gameTimer : "AoE2DE_s.exe", 0x03CF6A74; 		// "AoE2DE_s.exe"+03CF6A74
 	int gameState : "AoE2DE_s.exe", 0x03D6AF88, 0x5E8;	// "AoE2DE_s.exe"+03DB0D88 +5E8	
 }
 
@@ -31,14 +36,17 @@ state("AoE2DE_s", "87863") {
 }
 
 state("AoE2DE_s", "85614") {
-	int gameTimer : "AoE2DE_s.exe", 0x03D5CEC4;			// AoE2DE_s.exe+3D5CEC4
-	int gameState :	"AoE2DE_s.exe", 0x03DD07D8, 0x5E8; 	// AoE2DE_s.exe+3DD07D8 +5E8
+	int gameTimer : "AoE2DE_s.exe", 0x03D5CEC4;			// AoE2DE_s.exe+03D5CEC4
+	int gameState :	"AoE2DE_s.exe", 0x03DD07D8, 0x5E8; 	// AoE2DE_s.exe+03DD07D8 +5E8
 }
 
 init {
 	version = modules.First().FileVersionInfo.FileVersion;
 	
 	switch (version) {
+		case "101.102.39418.0":
+			version = "104954"; // February 2024
+			break;
 		case "101.102.27465.0":
 			version = "93001"; // Early September update (Return of Rome Event)
 			break;
