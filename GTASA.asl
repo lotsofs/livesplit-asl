@@ -1,3 +1,5 @@
+//
+
 /* This is originally by Tduva:
  * https://github.com/tduva/LiveSplit-ASL/blob/master/GTASA.asl
  *
@@ -77,8 +79,8 @@ startup
 		{"Snapshot",	new List<int> {0x7791BC, 0x80C3E4}},
 		{"Horseshoe", 	new List<int> {0x7791E4, 0x80C40C}},
 		{"Oyster",	new List<int> {0x7791EC, 0x80C414}},
-		{"Completed Stunt Jump", new List<int> {0x779064, 0x80C28C}}
-		// {"Found Stunt Jump", new List<int> {0x779064, 0x80C28C}}
+		{"Completed Stunt Jump", new List<int> {0x779064, 0x80C28C}},
+		{"Found Stunt Jump", new List<int> {0x779064, 0x80C28C}},
 	};
 
 	// Missions
@@ -403,7 +405,7 @@ startup
 			{0x649AC8, "Kickstart"}, 		// $MISSION_KICKSTART_PASSED ($90)
 			{0x64B7B4, "Blood Ring"}, 		// $MISSION_BLOODRING_PASSED ($1941)
 			{0x64BDB4, "8-Track"},			// streetraces 25
-			{0xA4BDB8, "Dirt Track"},		// streetraces 26
+			{0x64BDB8, "Dirt Track"},		// streetraces 26
 		}},	
 		{"Assets", new Dictionary<int, string> {
 			{0x64B710, "Valet Parking"}, 	// $1900
@@ -465,7 +467,7 @@ startup
 			{1, "Paramedic started for the first time"},
 		}},
 		{6592864 + (8227 * 4), new Dictionary<int, string> { // $8227 Vigilante Level
-			{1, "Vigilante started for the first time"},
+			// {1, "Vigilante started for the first time"},
 		}},
 		{6592864 + (180 * 4), new Dictionary<int, string> { // $180 ($TOTAL_PASSENGERS_DROPPEDOFF) Taxi Fares Done
 			{1, "1 Taxi Fare dropped off"},
@@ -571,12 +573,12 @@ startup
 	vars.deathWarps = new Dictionary<string, List<string>> {
 		{"Tanker Commander", new List<string> {"Body Harvest"}},
 		{"Body Harvest", new List<string> {"King in Exile"}},
-		
 		{"Jizzy (Cutscene)", new List<string> {"Jizzy"}},
 		{"Jizzy", new List<string> {"Mountain Cloud Boys"}},
 		{"Mike Toreno", new List<string> {"Lure"}},
 		{"Lure", new List<string> {"Paramedic"}},
 		{"The Da Nang Thang", new List<string> {"Yay Ka-Boom-Boom"}},
+		
 		{"Boat School", new List<string> {"Yay Ka-Boom-Boom","Taxi Driver"}},
 
 		{"Stretch", new List<string> {"Infernus"}},
@@ -600,17 +602,23 @@ startup
 	// Thread Start
 	//=============
 	// Split when a certain thread was started, usually when a mission was started.
-	// vars.thread
+	// vars.thread // Mission Start
 	vars.startMissions = new Dictionary<string, string> {
 		{"blood", "Blood Ring Started"},
 		{"boat", "Boat School Started"},
+		{"bcrash1", "Badlands Started"},
 		{"bskool", "Bike School Started"},
+		{"catcut", "King in Exile Started"},
+		{"cat4", "Against All Odds Started"},
 		{"cesar1", "High Stakes Lowrider Started"},
 		{"desert5", "Pilot School Started"},
 		{"drugs4", "Reuniting The Families Started"},
 		{"dskool", "Driving School Started"},
 		{"freight", "Freight Started"},
 		{"grove2", "Grove 4 Life Started"},
+		{"gymls", "Los Santos Gym Entered"},
+		{"gymlv", "Las Venturas Gym Entered"},
+		{"gymsf", "San Fierro Gym Entered"},
 		{"kicksta", "Kickstart Started"},
 		{"la1fin2", "The Green Sabre Started"},
 		{"intro1", "Big Smoke Started"},
@@ -618,7 +626,7 @@ startup
 		{"manson5", "Cut Throat Business Started"},
 		{"planes", "Plane Flight"},
 		{"psch", "Verdant Meadows (Airstrip Bought)"},
-		{"ryder3", "Catalyst"},
+		{"ryder3", "Catalyst Started"},
 		{"steal", "Wang Cars (Showroom Bought)"},
 		{"sweet7", "Los Sepulcros Started"},
 		{"truth2", "Are You Going To San Fierro? Started"},
@@ -628,6 +636,9 @@ startup
 	// be checked anyway so we can use this knowledge for mission specific subsplits
 	vars.startMissions2 = new List<string> {
 		"bcesar4",	// Wu Zi Mu / Farewell My Love
+		"bcour",	// Courier (LS, SF & LV)
+		"catalin", 	// Catalina Quadrilogy Mission Select Mode
+		"copcar", 	// Vigilante
 		"cprace", 	// Race Tournament / 8 Track / Dirt Track
 		"mtbiker",	// Chilliad CHallenge
 		"stunt",	// BMX / NRG Challenge
@@ -966,10 +977,10 @@ startup
 	//---------
 	//---------
 	//---------
-	addMissionList("BL_Intro", new List<string>() { "Badlands", "King in Exile" });
+	addMissionList("BL_Intro", new List<string>() { });
 	addMissionList("BL_Catalina", new List<string>() { 
         "Tanker Commander", "Small Town Bank", 
-        "Local Liquor Store", "Against All Odds" 
+        "Local Liquor Store" 
         });
 	// addMissionList("BL_Cesar", new List<string>() { "Wu Zi Mu",	"Farewell, My Love" });
 	addMissionList("BL_Truth", new List<string>() { "Body Harvest" });
@@ -986,6 +997,46 @@ startup
 	settings.Add("AYGTSF: Mothership Entered", false, "Mothership Entered");
 	settings.Add("AYGTSF: Arrival at the Garage", false, "Arrival at the Garage");
 	addMissionCustom("Are You Going To San Fierro?", true, "Mission Passed");
+
+	// Badlands
+	settings.Add("bl", true, "Badlands", "BL_Intro");
+	settings.CurrentDefaultParent = "bl";
+	settings.Add("Badlands Started", false, "Mission Started");
+	settings.Add("Badlands: Mountain Base", false, "Hit Marker at Mountain Base");
+	settings.Add("Badlands: Cabin Reached", false, "Cabin Arrival Cutscene Start");
+	settings.Add("Badlands: Cabin Cutscene", false, "Cabin Arrival Cutscene End");
+	settings.Add("Badlands: Reporter Dead", false, "Reporter Killed");
+	settings.Add("Badlands: Photo Taken", false, "Photo Taken");
+	addMissionCustom("Badlands", true, "Mission Passed");
+
+	// Catalina Quadrilogy
+	settings.Add("catalina quadrilogy", false, "Cutscenes", "BL_Catalina");
+	settings.CurrentDefaultParent = "catalina quadrilogy";
+	settings.Add("First Date Started", false);
+	settings.Add("First Base Started", false);
+	settings.Add("Gone Courting Started", false);
+	settings.Add("Made in Heaven Started", false);
+
+	// Against All Odds
+	settings.Add("aao", true, "Against All Odds", "BL_Catalina");
+	settings.CurrentDefaultParent = "aao";
+	settings.Add("Against All Odds Started", false, "Mission Started");
+	settings.Add("AAO: Robbery Cutscene Ended", false, "Robbery Cutscene Ended");
+	settings.Add("AAO: Door Satchel Placed", false, "First Satchel Placed");
+	settings.Add("AAO: Door Blown", false, "Door Blown");
+	settings.Add("AAO: Store Left", false, "Store Left");
+	settings.Add("AAO: 4th Wanted Level Star Lost", false, "Wanted Level Star 4 Lost (3 Remain)");
+	settings.Add("AAO: 3rd Wanted Level Star Lost", false, "Wanted Level Star 3 Lost (2 Remain)");
+	settings.Add("AAO: 2nd Wanted Level Star Lost", false, "Wanted Level Star 2 Lost (1 Remains)");
+	settings.Add("AAO: 1st Wanted Level Star Lost", false, "Wanted Level Star 1 Lost (None Remain)");
+	settings.Add("AAO: Final Marker Entered", false, "Final Marker Entered");
+	addMissionCustom("Against All Odds", true, "Mission Passed");
+
+	// King in Exile
+	settings.Add("kie", true, "King in Exile", "BL_Intro");
+	settings.CurrentDefaultParent = "kie";
+	settings.Add("King in Exile Started", false, "Mission Started");
+	addMissionCustom("King in Exile", true, "Mission Passed");
 
 	// Wu Zi Mu
 	settings.Add("wzm", true, "Wu Zi Mu", "BL_Cesar");
@@ -1245,8 +1296,11 @@ startup
 	addMissionCustom("Taxi Driver", true, "50 Taxi Fares dropped off (Completion)");
 	settings.CurrentDefaultParent = "VehicleSubmissions";
 	
-	addMissions3Header(6592864 + (8227 * 4), "vigilante_level", "Vigilante");
+	settings.Add("vigilante_level", true, "Vigilante");
 	settings.CurrentDefaultParent = "vigilante_level";
+	settings.Add("Vigilante Started", false);
+	settings.Add("Vigilante Started after Learning to Fly", false);
+	addMissions3(6592864 + (8227 * 4), "vigilante_level");
 	addMissionCustom("Vigilante", true, "Vigilante level 12 (Completion)");
 	settings.CurrentDefaultParent = "VehicleSubmissions";
 
@@ -1311,7 +1365,7 @@ startup
 
 	settings.Add("Race 26", true, "Dirt Track", "Stadium Events");
 	settings.CurrentDefaultParent = "Race 26";
-	settings.Add("Race 26 Checkpoint 0", false, "Race start (Countdown end)");
+	settings.Add("Race 26 Lap 1 Checkpoint 0", false, "Race start (Countdown end)");
 	var race26CpCount = vars.streetrace_checkpointcounts["Dirt Track"] - 1;
 	for (int lap = 1; lap <= 6; lap++) {
 		for (int cp = 1; cp < race26CpCount; cp++) {
@@ -1381,7 +1435,13 @@ startup
 	settings.CurrentDefaultParent = "Chilliad Challenge #3";
 	settings.Add("Chilliad Challenge #3 Started", false, "Countdown Start");	
 	settings.Add("Chilliad Challenge #3 Checkpoint 0", false, "Countdown End");
-	for (int cp = 1; cp < 22; cp++) { // 19 32 24
+	for (int cp = 1; cp <= 11; cp++) { // 19 32 24
+		var cpName = "Chilliad Challenge #3 Checkpoint "+cp;
+		settings.Add(cpName, false, "Checkpoint "+cp);
+	}
+	settings.Add("Chilliad Challenge #3 Checkpoint 12", false, "Checkpoint 12 & 13");
+	settings.SetToolTip("Chilliad Challenge #3 Checkpoint 12", "Checkpoint 13 is bugged and is automatically rewarded upon hitting checkpoint 12.");
+	for (int cp = 14; cp < 22; cp++) { // 19 32 24
 		var cpName = "Chilliad Challenge #3 Checkpoint "+cp;
 		settings.Add(cpName, false, "Checkpoint "+cp);
 	}
@@ -1393,8 +1453,10 @@ startup
 	settings.Add("NRG Stunt Challenge (Header)", true, "NRG-500 Stunt Challenge", "Vehicle Challenges");
 	settings.CurrentDefaultParent = "NRG Stunt Challenge (Header)";
 	settings.Add("NRG Stunt0", false, "Challenge Started");
-	settings.Add("NRG Stunt0AfterExport", false, "Challenge Started after completion of Export lists");
-	settings.SetToolTip("NRG Stunt0AfterExport", "Split the first time the mission is started after completion of all export lists.");
+	settings.Add("NRG Stunt0AfterExportList1", false, "Challenge Started after completion of Export List 1");
+	settings.Add("NRG Stunt0AfterExportList3", false, "Challenge Started after completion of Export List 3");
+	settings.SetToolTip("NRG Stunt0AfterExportList1", "Split the first time the mission is started after completion of the first export list.");
+	settings.SetToolTip("NRG Stunt0AfterExportList3", "Split the first time the mission is started after completion of all export lists.");
 	for (var i = 1; i <= 18; i++) {
 		settings.Add("NRG Stunt"+i, false, "Checkpoint "+i);
 	}
@@ -1488,7 +1550,23 @@ startup
 	// Gym Moves
 	//----------
 	settings.CurrentDefaultParent = "Missions2";
-	addMissions2Header("Gym Moves", true, "Gym Moves");
+	settings.Add("Gym Moves", true);
+	settings.CurrentDefaultParent = "Gym Moves";
+	settings.Add("LS Gym", true, "Los Santos Gym");
+	settings.Add("SF Gym", true, "San Fierro Gym");
+	settings.Add("LV Gym", true, "Las Venturas Gym");
+	
+	settings.Add("Los Santos Gym Entered", false, "LS Gym Entered", "LS Gym");
+	settings.Add("San Fierro Gym Entered", false, "SF Gym Entered", "SF Gym");
+	settings.Add("Las Venturas Gym Entered", false, "LV Gym Entered", "LV Gym");
+
+	settings.Add("Los Santos Gym Fight Start", false, "Los Santos Gym Fight Start", "LS Gym");
+	settings.Add("San Fierro Gym Fight Start", false, "San Fierro Gym Fight Start", "SF Gym");
+	settings.Add("Las Venturas Gym Fight Start", false, "Las Venturas Gym Fight Start", "LV Gym");
+
+	settings.Add("Los Santos Gym Moves", true, "LS Moves Learnt", "LS Gym");
+	settings.Add("San Fierro Gym Moves", true, "SF Moves Learnt", "SF Gym");
+	settings.Add("Las Venturas Gym Moves", true, "LV Moves Learnt", "LV Gym");
 
 	#endregion
 
@@ -1506,11 +1584,13 @@ startup
 		settings.SetToolTip(item.Key+"All", "Splits when the game registers all as collected. This check is only done by the game once every 3 seconds.");
 		settings.Add(item.Key+"Each", false, "Total Collected "+item.Key+"s", item.Key);
 		settings.SetToolTip(item.Key+"Each", "Splits when the total collected reaches this number, as it is shown on screen upon collection.");
-		if (item.Key == "Tag" || item.Key == "Snapshot") {
+		if (true) {
 			settings.Add(item.Key+"Specific", false, "Specific "+item.Key+"s", item.Key);
 			settings.SetToolTip(item.Key+"Specific", "Splits when a specific collectible of this kind is collected. For reference, see ehgames.com/gta/maplist");
 			var count = 50;
 			if (item.Key == "Tag") { count = 100; }
+			else if (item.Key == "Completed Stunt Jump") { count = 70; }
+			else if (item.Key == "Found Stunt Jump") { count = 70; }
 			for (int i = 1; i <= count; i++) {
 				var absName = "Specific "+item.Key+": "+i;
 				var relName = item.Key+" "+(i < count?i.ToString():i+" (All Done)");
@@ -1848,6 +1928,9 @@ init
 	// Add global variables for mid-mission events
 	vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(6592864 + (802 * 4)+offset)) { Name = "100%_achieved" }); // $_100_PERCENT_COMPLETE
 	vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(6592864 + (7011 * 4)+offset)) { Name = "aygtsf_plantsremaining" });
+	vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(6592864 + (2208 * 4)+offset)) { Name = "bl_cabinreached" });	// Trip Skip enabled
+	vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(6592864 + (6965 * 4)+offset)) { Name = "bl_stage" });
+	vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(6592864 + (64 * 4)+offset)) { Name = "catalina_count" }); // CATALINA_TOTAL_PASSED_MISSIONS
 	vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(6592864 + (1799 * 4)+offset)) { Name = "chilliad_race" });
 	vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(6592864 + (1801 * 4)+offset)) { Name = "chilliad_done" }); // $MISSION_CHILIAD_CHALLENGE_PASSED
 	vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(6592864 + (189 * 4)+offset)) { Name = "courier_active" }); // $ONMISSION_COURIER
@@ -1879,14 +1962,18 @@ init
 	vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(0x57F10C+offset)) { Name = "ctb_checkpoint2" });
 
 	vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(0x648A00+offset)) { Name = "r_dialogueblock" }); // 40@
+	vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(0x648A10+offset)) { Name = "gym_fighting" }); // 44@
 	vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(0x648A18+offset)) { Name = "bs_dialogueblock" }); // 46@
 	vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(0x648A38+offset)) { Name = "g4l_territory2" }); // 54@
 	vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(0x648A40+offset)) { Name = "g4l_drivetoidlewood" }); // 56@
 	vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(0x648A48+offset)) { Name = "g4l_territory1" }); // 58@
 	vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(0x648A4C+offset)) { Name = "stunt_checkpoint" }); //59@
 	vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(0x648ABC+offset)) { Name = "aygtsf_progress" }); //87@
+	vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(0x648AC8+offset)) { Name = "aao_finalmarker" }); //90@
+	vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(0x648AE8+offset)) { Name = "aao_storeleft" }); //98@
 	vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(0x648AF0+offset)) { Name = "tgs_chapter" }); //100@
-	vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(0x648B08+offset)) { Name = "trucking_leftcompound" }); 
+	vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(0x648B08+offset)) { Name = "trucking_leftcompound" });
+	vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(0x648B10+offset)) { Name = "aao_angryshouts" }); //108@
 	vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(0x648B68+offset)) { Name = "freight_stations" }); 
 	vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(0x648BBC+offset)) { Name = "aygtsf_dialogue" }); //151@
 	vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(0x648D64+offset)) { Name = "races_flycheckpoint" }); 
@@ -1899,14 +1986,19 @@ init
 	vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(0x64950C+offset)) { Name = "chilliad_checkpoints3" }); 
 	vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(0x649518+offset)) { Name = "chilliad_checkpoints" }); 
 	vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(0x649534+offset)) { Name = "courier_checkpoints" }); 
-	vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(0x649544+offset)) { Name = "courier_levels" }); 
+	vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(0x649540+offset)) { Name = "couriersf_levels" }); //760@
+	vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(0x649544+offset)) { Name = "courierls_levels" }); //761@
+	vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(0x649548+offset)) { Name = "courierlv_levels" }); //762@
 	vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(0x649700+offset)) { Name = "courier_city" }); 
 
-	// vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(0x68EF54+offset)) { Name = "valet_level" }); 
+	// Things
 	vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(0x691424+offset)) { Name = "races_laps" }); 
     vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(0x7791D0+offset)) { Name = "gang_territories" });
-
-	// Add global variables that aren't exclusive to one (type of) mission
+	
+	// Values not mission specific
+	vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(0x7AA420+offset)) { Name = "wanted_level" });
+    
+	// Values not mission specific, global from SCM ($xxxx)
 	vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(6592864 + (43 * 4)+offset)) { Name = "interior" });
 
 	// This means loading from a save and such, not load screens (this doesn't work with Steam since I couldn't find the address for it)
@@ -2195,7 +2287,7 @@ split
 			if (value.Current > 0 && value.Old == 0)
 			{
 				vars.TrySplit(m.Value);
-				vars.lastStartedMission = "None";
+				// vars.lastStartedMission = "None";
 			}
 		}
 	}
@@ -2267,6 +2359,37 @@ split
 	// or local variables that require special attention.
 	#region mission events
 
+	#region Against All Odds
+	// Angry Shouts: Based on lines/tutorial boxes
+	// 0: Pre cutscene
+	// 1: Post cutscene
+	// 2: How to place
+	// 3: How to move away
+	// 4: How to detonate
+	// 5: Boom
+	// 6: Now do the safe
+	if (vars.lastStartedMission == "cat4") {
+		var aao_angryshouts = vars.watchers["aao_angryshouts"];
+		var aao_storeleft = vars.watchers["aao_storeleft"];
+		var aao_finalmarker = vars.watchers["aao_finalmarker"];
+		var aao_wantedlevel = vars.watchers["wanted_level"];
+		if (aao_angryshouts.Old == 0 && aao_angryshouts.Current == 1) { vars.TrySplit("AAO: Robbery Cutscene Ended");}
+		else if (aao_angryshouts.Old == 2 && aao_angryshouts.Current == 3) { vars.TrySplit("AAO: Door Satchel Placed");}
+		else if (aao_angryshouts.Old == 4 && aao_angryshouts.Current == 5) { vars.TrySplit("AAO: Door Blown");}
+		if (aao_storeleft.Current == 1) { 
+			if (aao_storeleft.Old == 0) {
+				vars.TrySplit("AAO: Store Left");
+			}
+			if (aao_wantedlevel.Old == 4 && aao_wantedlevel.Current == 3) { vars.TrySplit("AAO: 4th Wanted Level Star Lost");}
+			else if (aao_wantedlevel.Old == 3 && aao_wantedlevel.Current == 2) { vars.TrySplit("AAO: 3rd Wanted Level Star Lost");}
+			else if (aao_wantedlevel.Old == 2 && aao_wantedlevel.Current == 1) { vars.TrySplit("AAO: 2nd Wanted Level Star Lost");}
+			else if (aao_wantedlevel.Old == 1 && aao_wantedlevel.Current == 0) { vars.TrySplit("AAO: 1st Wanted Level Star Lost");}
+			if (aao_finalmarker.Current == 1 && aao_finalmarker.Old == 0) {
+				vars.TrySplit("AAO: Final Marker Entered");
+			}
+		}
+	}
+	#endregion
 	#region Are You Going To San Fierro?
 	//==================================
 	// aygtsf_progress reaches 1 when all plants are destroyed. Redundant because we're already counting the plants
@@ -2294,6 +2417,32 @@ split
 		}
 	}
 	#endregion
+	#region Badlands
+	// =============
+	// bl_stage
+	// -1: mission start
+	// 0: mountain base marker reached
+	// bl_cabinreached set to 1 at start of cabin cutscene
+	// 1: cabin cutscene finished
+	// 2: ?
+	// 3: reporter fleeing to car / car driving away cutscene
+	// 4: car chase
+	// 5: car on fire, reporter fleeing
+	// 6: car exploded, reporter still alive
+	// 7: reporter dead
+	// 8: photograph taken, return
+	if (vars.lastStartedMission == "bcrash1") {
+		var badlands_progress = vars.watchers["bl_stage"];
+		var badlands_tripskip = vars.watchers["bl_cabinreached"];
+		if (badlands_tripskip.Current == 1 && badlands_tripskip.Old == 0) {
+			vars.TrySplit("Badlands: Cabin Reached");
+		}
+		if (badlands_progress.Current == 0 && badlands_progress.Old == -1) { vars.TrySplit("Badlands: Mountain Base"); }
+		if (badlands_progress.Current == 1 && badlands_progress.Old == 0) { vars.TrySplit("Badlands: Cabin Cutscene"); }
+		if (badlands_progress.Current == 7 && badlands_progress.Old <= 6) { vars.TrySplit("Badlands: Reporter Dead"); }
+		if (badlands_progress.Current == 8 && badlands_progress.Old == 7) { vars.TrySplit("Badlands: Photo Taken"); }
+	}
+	#endregion
 	#region Big Smoke
 	//===============
 	// Dialogue block
@@ -2318,6 +2467,15 @@ split
 			}
 		}
 	}
+	#endregion
+	#region Catalina Quadrilogy
+	if (threadChanged && thread.Current == "catalin") {
+		var catalina_count = vars.watchers["catalina_count"];
+		if (catalina_count.Current == 0) { vars.TrySplit("First Date Started");}
+		else if (catalina_count.Current == 1) { vars.TrySplit("First Base Started");}
+		else if (catalina_count.Current == 2) { vars.TrySplit("Gone Courting Started");}
+		else if (catalina_count.Current == 3) { vars.TrySplit("Made in Heaven Started");}
+	} 
 	#endregion
 	#region Chilliad Challenge
 	//==================
@@ -2360,7 +2518,11 @@ split
 		}
 	}
 	if (courier_active.Current == 1) {
-		var courier_levels = vars.watchers["courier_levels"];
+		string courier_cityname = "ls";
+		if (courier_city.Current == 2) courier_cityname = "sf";
+		if (courier_city.Current == 3) courier_cityname = "lv";
+
+		var courier_levels = vars.watchers["courier"+courier_cityname+"_levels"];
 		if (courier_levels.Current > courier_levels.Old) {
 			vars.TrySplit("courier_" + courier_city.Current + "_level_" + (courier_levels.Current));
 		}
@@ -2447,6 +2609,28 @@ split
 			vars.TrySplit("g4l_territory2");
 		}
 	}
+	#endregion
+	#region Gym Moves
+	//===============
+	if (vars.lastStartedMission == "gymsf") {
+		var gym_start = vars.watchers["gym_fighting"];
+		if (gym_start.Current > gym_start.Old && gym_start.Current == 1) {
+			vars.TrySplit("San Fierro Gym Fight Start");
+		}
+	} 
+	else if (vars.lastStartedMission == "gymls") {
+		var gym_start = vars.watchers["gym_fighting"];
+		if (gym_start.Current > gym_start.Old && gym_start.Current == 1) {
+			vars.TrySplit("Los Santos Gym Fight Start");
+		}
+	}
+	else if (vars.lastStartedMission == "gymlv") {
+		var gym_start = vars.watchers["gym_fighting"];
+		if (gym_start.Current > gym_start.Old && gym_start.Current == 1) {
+			vars.TrySplit("Las Venturas Gym Fight Start");
+		}
+	}
+
 	#endregion
 	#region Import/Export Lists
 	//====================
@@ -2546,7 +2730,7 @@ split
 		if (lossep_homiesrecruited.Old == 0 && lossep_homiesrecruited.Current == 1) {
 			vars.TrySplit("Los Sepulcros: One Homie Recruited");
 		}
-		if (lossep_cardoorsunlocked.Old == 1 && lossep_cardoorsunlocked.Current > 0) {
+		if (lossep_cardoorsunlocked.Old == 0 && lossep_cardoorsunlocked.Current == 1) {
 			vars.TrySplit("Los Sepulcros: Two Homies Recruited");
 		}
 		if (lossep_dialogue.Old != 1 && lossep_dialogue.Current == 1) {
@@ -2712,9 +2896,14 @@ split
 			var name = "BMX Stunt";
 			if (stunt_type == 1) { name = "NRG Stunt"; }
 			vars.TrySplit(name + "0");
-			if (stunt_type == 1 && vars.Passed("Export Number 30")) {
-				vars.TrySplit(name+"0AfterExport");
-			}
+			if (stunt_type == 1) {
+				if (vars.Passed("Export Number 30")) {
+					vars.TrySplit(name+"0AfterExportList3");
+				}
+				else if (vars.Passed("Export List 1")) {
+					vars.TrySplit(name+"0AfterExportList1");
+				}
+			} 
 		}
 	}
 	var stunt_checkpoint = vars.watchers["stunt_checkpoint"];
@@ -2831,6 +3020,16 @@ split
 		vars.TrySplit("Farewell, My Love Started");
 	}
 	#endregion
+	#region Vigilante
+	//===============
+	if (threadChanged && thread.Current == "copcar") {
+		vars.TrySplit("Vigilante Started");
+		if (vars.Passed("Learning to Fly")) {
+			vars.TrySplit("Vigilante Started after Learning to Fly");
+		}
+	}
+	#endregion
+
 
 	#endregion
 
@@ -2915,34 +3114,29 @@ split
 	//=================
 	var pedStatus = vars.watchers["pedStatus"];
 	if (pedStatus.Current != pedStatus.Old) {
-		var warpSplit = false;
-		if (!warpSplit && pedStatus.Current == 63) // Busted
+		if (pedStatus.Current == 63) // Busted
 		{
 			foreach (var item in vars.bustedWarps) {
 				if (vars.Passed(item.Key)) {
 					foreach (var item2 in item.Value) {
 						if (!vars.Passed(item2)) {
 							vars.TrySplit("BW '" + item.Key + "' to '" + item2 + "'");
-							warpSplit = true;
 							break;
 						}
 					}
-					if (warpSplit) break;
 				}
 			}
 		}
-		if (!warpSplit && pedStatus.Current == 55) // Wasted
+		if (pedStatus.Current == 55) // Wasted
 		{
 			foreach (var item in vars.deathWarps) {
 				if (vars.Passed(item.Key)) {
 					foreach (var item2 in item.Value) {
 						if (!vars.Passed(item2)) {
 							vars.TrySplit("DW '" + item.Key + "' to '" + item2 + "'");
-							warpSplit = true;
 							break;
 						}
 					}
-					if (warpSplit) break;
 				}
 			}
 		}
@@ -2958,7 +3152,7 @@ split
 				vars.DebugOutput("Start skipping splits: Deviation from route GI->LS->HP->C->RUS->RTF");
 			}
 		}
-		if (thread.Current == "drugs4") {
+		if (thread.Current == "drugs4" && vars.skipSplits == true) {
 			// Start splitting again on Reuniting The Families
 			vars.skipSplits = false;
 			vars.DebugOutput("End skipping splits");
