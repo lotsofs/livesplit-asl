@@ -82,66 +82,9 @@ startup {
 	};
 	vars.DebugOutput = DebugOutput;
 
-	// Use lists to workaround ASL's lack of class support
-	vars.addressList_Name = new List<string>();
-	vars.addressList_Bytes = new List<int>();
-	vars.addressList_Address = new List<int>();
-	vars.dynamicAddressList_Name = new List<string>();
-	vars.dynamicAddressList_Bytes = new List<int>();
-	vars.dynamicAddressList_Address = new List<int>();
-
-	Action<int,string,int,bool> AddAddressWatcher = (address,name,bytes,dynamic) => {
-		if (dynamic) {
-			vars.DebugOutput("Preparing Watcher (miscD): " + name + " 0x" + address.ToString("x"));
-			vars.dynamicAddressList_Address.Add(address);
-			vars.dynamicAddressList_Name.Add(name);
-			vars.dynamicAddressList_Bytes.Add(bytes);
-		}
-		else {
-			vars.DebugOutput("Preparing Watcher (miscS): " + name + " 0x" + address.ToString("x"));
-			vars.addressList_Address.Add(address);
-			vars.addressList_Name.Add(name);
-			vars.addressList_Bytes.Add(bytes);
-		}
-	};
-	vars.AddAddressWatcher = AddAddressWatcher;
 	#endregion
-	
-	//=============================================================================
-	// State keeping
-	//=============================================================================
 
-	// Already split splits during this attempt (until timer reset)
-	vars.completedSplits = new List<string>();
-
-	// Splits that are completed are added to a queue and split one by one 
-	// to prevent single-splitting when multiple are completed simultaneously.
-	vars.splitQueue = new List<string>();
-
-	// Most recently started mission thread. Resets on pass, but not on fail.
-	vars.lastStartedMission = "";
-
-	// Bool to track if splits should be skipped instead of splits (for deviating non-linear-esque routes.)
-	vars.skipSplits = false;
-
-	// Track timer phase
-	vars.PrevPhase = null;
-
-	// Timestamp when the last load occured (load means loading from a save
-	// and such, not load screens)
-	vars.lastLoad = 0;
-
-	// Timestamp when the last split was executed (to prevent double-splits)
-	vars.lastSplit = 0;
-
-	// Whether we should wait before splitting (eg game is still being loaded)
-	vars.waiting = false;
-
-	//=============================================================================
-	// Memory Addresses
-	//=============================================================================
-	// There are more memory addresses defined in `init` in the "Version Detection"
-	// and "Memory Watcher" sections.
+	#region Address Keeping
 
 	// Global SCM variables ($xxxx) to watch in memory
 	vars.watchScmGlobalVariables = new Dictionary<int,string>();
@@ -149,12 +92,58 @@ startup {
 	// Local SCM variables (xx@) to watch in memory (these are actually just global)
 	vars.watchScmMissionLocalVariables = new List<int>();
 
+	// Non-SCM addresses (eg. Stats entries)
+	vars.addressList = new List<Tuple<string, int, int>>();
+	vars.addressListDynamic = new List<Tuple<string, int, int>>();
+
+	// Pointer addresses
+	vars.pointerList = new List<Tuple<string, int, DeepPointer>>();
+
+	Action<int,string,int,bool> AddAddressWatcher = (address,name,bytes,dynamic) => {
+		if (dynamic) {
+			vars.DebugOutput("Preparing Watcher (miscD): " + name + " 0x" + address.ToString());
+			vars.addressListDynamic.Add(Tuple.Create(name, bytes, address));
+		}
+		else {
+			vars.DebugOutput("Preparing Watcher (miscS): " + name + " 0x" + address.ToString());
+			vars.addressList.Add(Tuple.Create(name, bytes, address));
+		}
+	};
+	vars.AddAddressWatcher = AddAddressWatcher;
+
+	Action<DeepPointer,string,int> AddPointerWatcher = (pointer, name, bytes) => {
+		vars.DebugOutput("Preparing Pointer Watcher (miscP): " + name);
+		vars.pointerList.Add(Tuple.Create(name, bytes, pointer));
+	};
+	vars.AddPointerWatcher = AddPointerWatcher;
+	
+	#endregion
+	
+	//=============================================================================
+	// State keeping
+	//=============================================================================
+
+	vars.completedSplits = new List<string>();	// Already split splits during this attempt (until timer reset)
+	vars.splitQueue = new List<string>();	// A queue to ensure splits are split one by one to prevent single-splitting when multiple are completed simultaneously.
+	vars.lastStartedMission = "";	// Most recently started mission thread. Resets on pass, but not on fail.
+	vars.skipSplits = false;	// Bool to track if splits should be skipped instead of splits (for deviating non-linear-esque routes.)
+	vars.PrevPhase = null;	// Track timer phase
+	vars.lastLoad = 0;		// Timestamp when the last load occured (load means loading from a save and such, not load screens)
+	vars.lastSplit = 0;		// Timestamp when the last split was executed (to prevent double-splits)
+	vars.waiting = false;	// Whether we should wait before splitting (eg game is still being loaded)
+
+	//=============================================================================
+	// Settings & Memory Addresses
+	//=============================================================================
+	// There are more memory addresses defined in `init` in the "Version Detection"
+	// and "Memory Watcher" sections.
+
 	// Funcs to execute in the split check.
 	// These need to be funcs and not actions because actions here don't allow returning out
 	// The bool does nothing
 	vars.CheckSplit = new List<Func<bool?>>();
 
-	#region Settings
+	#region Settings 
 
 	#region Main Missions
 
@@ -177,12 +166,10 @@ startup {
 	// Tags are tracked as an int, with 0 being not sprayed and 255 being fully sprayed.
 	// Tags at values 229 and above count as collected. The boop will play at 255.
 	// The order in memory does not match the order listed on EHGames.com/gta/maplist
-	// Tags always stay in memory, even after collection, but their location may or may not
-	// differ depending on saveload etc. Tag address (8 bytes) looks like this:
-	// ?? ??		-> Unique phrase to identify each tag, no clue what it means
-	// 2? 13		-> either 2B 13, 2C 13, or 2D 13, idk what it means either
-	// ?? 00		-> collection %
-	// 00 00
+	// Tags always stay in memory, even after collection. Their location appears consistent
+	// between saves as well. Tag address (8 bytes) looks like this:
+	// 48 ?? ?? ??	 	-> 48 = appears specific to each tag (repeats possible). The rest is inconsistent gibberish.
+	// ?? 00 00 00		-> ?? = collection %
 	//
 	// === Pickup Collectibles ===
 	// Horseshoes, Snapshots, & Oysters - in that order - are placed back to back in memory.
@@ -232,40 +219,16 @@ startup {
 	// 00 00 00 00 
 
 	vars.tag_ehgames_index = new byte[100] {
-		51,52,53,54,55,56,57,58,59,60,
-		61,62,63,64,65,66,67,68,69,70,
-		71,72,73,74,75,76,77,78,79,80,
-		81,82,83,84,85,86,87,1,2,3,
-		4,5,6,7,8,9,10,11,12,13,
-		14,15,16,17,18,19,20,21,22,23,
-		24,25,26,27,28,29,30,31,32,33,
-		34,35,36,37,38,39,40,41,42,43,
-		44,45,46,47,48,49,50,88,89,90,
-		91,92,97,98,99,100,93,94,95,96
-	};
-	vars.tag_identifiers_lsb = new string[100] {
-		"4859","8059","B859","F059","285A","605A","6874","A074","D874","1075",
-		"4875","C0B2","F8B2","30B3","68B3","A0B3","D8B3","10B4","48B4","80B4",
-		"B8B4","5804","9004","C804","0005","3805","7005","A805","E005","1806",
-		"5006","8806","C006","F806","3007","6807","A007","8829","5029","1829",
-		"9043","3844","0044","C843","7044","A844","E044","1845","5045","8845",
-		"C045","F845","3046","6846","A046","D846","1047","4847","8047","B847",
-		"F047","2848","9887","D087","0888","B09D","E89D","209E","589E","909E",
-		"C89E","009F","389F","709F","A89F","E09F","18A0","50A0","88A0","C0A0",
-		"F8A0","30A1","68A1","A0A1","D8A1","10A2","48A2","70C2","A8C2","E0C2",
-		"18C3","50C3","10E1","48E1","80E1","B8E1","102E","482E","802E","B82E",
-	};
-	vars.tag_identifiers_msb = new ushort[100] {
-		0x5948,0x5980,0x59B8,0x59F0,0x5A28,0x5A60,0x7468,0x74A0,0x74D8,0x7510,
-		0x7548,0xB2C0,0xB2F8,0xB330,0xB368,0xB3A0,0xB3D8,0xB410,0xB448,0xB480,
-		0xB4B8,0x0458,0x0490,0x04C8,0x0500,0x0538,0x0570,0x05A8,0x05E0,0x0618,
-		0x0650,0x0688,0x06C0,0x06F8,0x0730,0x0768,0x07A0,0x2988,0x2950,0x2918,
-		0x4390,0x4438,0x4400,0x43C8,0x4470,0x44A8,0x44E0,0x4518,0x4550,0x4588,
-		0x45C0,0x45F8,0x4630,0x4668,0x46A0,0x46D8,0x4710,0x4748,0x4780,0x47B8,
-		0x47F0,0x4828,0x8798,0x87D0,0x8808,0x9DB0,0x9DE8,0x9E20,0x9E58,0x9E90,
-		0x9EC8,0x9F00,0x9F38,0x9F70,0x9FA8,0x9FE0,0xA018,0xA050,0xA088,0xA0C0,
-		0xA0F8,0xA130,0xA168,0xA1A0,0xA1D8,0xA210,0xA248,0xC270,0xC2A8,0xC2E0,
-		0xC318,0xC350,0xE110,0xE148,0xE180,0xE1B8,0x2E10,0x2E48,0x2E80,0x2EB8,
+		50,51,52,53,54,55,56,57,58,59,
+		60,61,62,63,64,65,66,67,68,69,
+		70,71,72,73,74,75,76,77,78,79,
+		80,81,82,83,84,85,86, 0, 1, 2,
+		 3, 4, 5, 6, 7, 8, 9,10,11,12,
+		13,14,15,16,17,18,19,20,21,22,
+		23,24,25,26,27,28,29,30,31,32,
+		33,34,35,36,37,38,39,40,41,42,
+		43,44,45,46,47,48,49,87,88,89,
+		90,91,96,97,98,99,92,93,94,95,
 	};
 	vars.collectible_identifiers_lsb = new string[150] { 
 		// Horseshoes
@@ -338,7 +301,6 @@ startup {
 		0x48CDBE0C, 0x3560CFF0, 0x4348AC18, 0x5BD818E0, 0x07584418,
 	};
 	
-
 	settings.CurrentDefaultParent = null;
 	
 	settings.Add("Collectibles", false, "Collectibles");
@@ -377,23 +339,25 @@ startup {
 	settings.Add("HorseshoeSpecific", false, "Specific Horseshoes", "Horseshoes");
 	settings.Add("SnapshotSpecific", false, "Specific Snapshots", "Snapshots");
 	settings.Add("OysterSpecific", false, "Specific Oysters", "Oysters");
-	// settings.Add("Completed Stunt JumpSpecific", false, "Specific Completed Stunt Jumps", "Completed Stunt Jumps");
-	// settings.Add("Found Stunt JumpSpecific", false, "Specific Found Stunt Jumps", "Found Stunt Jumps");
+	settings.Add("Completed Stunt JumpSpecific", false, "Specific Completed Stunt Jumps", "Completed Stunt Jumps");
+	settings.Add("Found Stunt JumpSpecific", false, "Specific Found Stunt Jumps", "Found Stunt Jumps");
 	settings.SetToolTip("TagSpecific", "Splits when a specific collectible of this kind is collected. For reference, see ehgames.com/gta/maplist");
 	settings.SetToolTip("HorseshoeSpecific", "Splits when a specific collectible of this kind is collected. For reference, see ehgames.com/gta/maplist");
 	settings.SetToolTip("SnapshotSpecific", "Splits when a specific collectible of this kind is collected. For reference, see ehgames.com/gta/maplist");
 	settings.SetToolTip("OysterSpecific", "Splits when a specific collectible of this kind is collected. For reference, see ehgames.com/gta/maplist");
-	// settings.SetToolTip("Completed Stunt JumpSpecific", "Splits when a specific collectible of this kind is collected. For reference, see ehgames.com/gta/maplist");
-	// settings.SetToolTip("Found Stunt JumpSpecific", "Splits when a specific collectible of this kind is collected. For reference, see ehgames.com/gta/maplist");
+	settings.SetToolTip("Completed Stunt JumpSpecific", "Splits when a specific collectible of this kind is collected. For reference, see ehgames.com/gta/maplist");
+	settings.SetToolTip("Found Stunt JumpSpecific", "Splits when a specific collectible of this kind is collected. For reference, see ehgames.com/gta/maplist");
 
 	for (int i = 0; i < 100; i++) {
 		settings.Add("TagEach"+i, false, (i+1)+" Tags", "TagEach");
-		settings.Add("TagSpecific"+i, false, "Tag "+(i+1), "TagSpecific");
+		settings.Add("TagSpecific"+vars.tag_ehgames_index[i], false, "Tag "+(i+1), "TagSpecific");
 		if (i >= 70) {
 			continue;
 		}
 		settings.Add("Completed Stunt JumpEach"+i, false, (i+1)+" Completed Stunt Jumps", "Completed Stunt JumpEach");
 		settings.Add("Found Stunt JumpEach"+i, false, (i+1)+" Found Stunt Jumps", "Found Stunt JumpEach");
+		settings.Add("Completed Stunt JumpSpecific"+i, false, "Completed Stunt Jump "+(i+1), "Completed Stunt JumpSpecific");
+		settings.Add("Found Stunt JumpSpecific"+i, false, "Found Stunt Jump "+(i+1), "Found Stunt JumpSpecific");
 		if (i >= 50) {
 			continue;
 		}
@@ -405,17 +369,27 @@ startup {
 		settings.Add("CollectibleSpecific"+(i+100), false, "Oyster "+(i+1), "OysterSpecific");
 	}
 
+	// Add watchers for individual tags
+	for (int i = 0; i < 100; i++) {
+		vars.AddAddressWatcher(0x69A8C0+0x4+i*0x8, "TagSpecific"+i, 1, true);
+	}
 	// Add watchers for individual pickup collectibles
 	for (int i = 0; i < 150; i++) {
-		vars.AddAddressWatcher(0x578E64+0xC+i*0x20, "CollectibleIdCheck"+i, 4, true);
+		var b = 0x578EE4;
+		vars.AddAddressWatcher(b+0xC+i*0x20, "CollectibleIdCheck"+i, 4, true);
 		if (i < 50 || i >= 100) {
 			// Horseshoes, Oysters
-			vars.AddAddressWatcher(0x578E64+0x19+i*0x20, "CollectibleSpecific"+i, 1, true);
+			vars.AddAddressWatcher(b+0x19+i*0x20, "CollectibleSpecific"+i, 1, true);
 		}
 		else {
 			// Snapshots
-			vars.AddAddressWatcher(0x578E64+0x18+i*0x20, "CollectibleSpecific"+i, 1, true);
+			vars.AddAddressWatcher(b+0x18+i*0x20, "CollectibleSpecific"+i, 1, true);
 		}
+	}
+	// Add watchers for unique stunt jumps
+	for (int i = 0; i < 70; i++) {
+		var p = new DeepPointer(0x69A888, 0x0, 0x40 + 0x44*i);
+		vars.AddPointerWatcher(p, "Stunt JumpSpecific"+i, 2);
 	}
 	// Add watchers for # collected (regardless of which)
 	vars.AddAddressWatcher(0x69AD74, "TagEach", 1, false);
@@ -430,14 +404,39 @@ startup {
 	vars.watchScmGlobalVariables.Add(1518, "SnapshotAll"); // $ALL_PHOTOS_TAKEN	
 	vars.watchScmGlobalVariables.Add(1516, "OysterAll"); // $ALL_OUSTERS_COLLECTED	
 	
-
-	for (int i = 0; i < 100; i++) {
-		vars.AddAddressWatcher(0x69A8C0+0x4+i*0x8, "TagSpecific"+vars.tag_ehgames_index[i], 1, true);
-		// Tags remain in memory, we only need to check a few: 51, 1, 96 numbered on EHGames respectively
-		if (i == 0 || i == 37 || i == 99) {
-			vars.AddAddressWatcher(0x69A8C0+i*0x8, "TagIdCheck"+i, 2, true);
+	Func<bool?> func_tags = () => {
+		var tag_allCollected = vars.watchers["TagAll"];
+		if (tag_allCollected.Changed && tag_allCollected.Current == 1 && tag_allCollected.Old == 0) {
+			vars.TrySplit("TagAll");
 		}
-	}
+		var tag_totalCollected = vars.watchers["TagEach"];
+		if (tag_totalCollected.Changed && tag_totalCollected.Current > tag_totalCollected.Old) {
+			vars.TrySplit("TagEach"+tag_totalCollected.Current);
+		}
+		else if (tag_totalCollected.Old >= 100) {
+			// Break out if everything's already collected.
+			return;
+		}
+		
+		// Check collection state of each tag
+		byte tag_collectedNow = 255;
+		for (int i = 0; i < 100; i++) {
+			if (tag_collectedNow < 100) {
+				break;
+			}
+			var collectionStatus = vars.watchers["TagSpecific"+i];
+			if (collectionStatus.Changed && collectionStatus.Current >= 229 && collectionStatus.Old <= 228) {
+				// Collection status changed, Split!
+				tag_collectedNow = (byte)i;
+			}
+		}
+		if (tag_collectedNow < 100) {
+			vars.TrySplit("TagSpecific"+tag_collectedNow);
+		}
+		return;
+		return false;
+	};
+	vars.CheckSplit.Add(func_tags);
 	Func<bool?> func_collectibles = () => {
 		var horseshoe_allCollected = vars.watchers["HorseshoeAll"];
 		var snapshot_allCollected = vars.watchers["SnapshotAll"];
@@ -454,7 +453,7 @@ startup {
 		var horseshoe_totalCollected = vars.watchers["HorseshoeEach"];
 		var snapshot_totalCollected = vars.watchers["SnapshotEach"];
 		var oyster_totalCollected = vars.watchers["OysterEach"];
-		var collectibles_totalCollected = horseshoe_totalCollected.Current+snapshot_totalCollected.Current+oyster_totalCollected.Current;
+		var collectibles_totalCollected = horseshoe_totalCollected.Old+snapshot_totalCollected.Old+oyster_totalCollected.Old;
 		if (horseshoe_totalCollected.Changed && horseshoe_totalCollected.Current > horseshoe_totalCollected.Old) {
 			vars.TrySplit("HorseshoeEach"+horseshoe_totalCollected.Current);
 		}
@@ -564,73 +563,46 @@ startup {
 		return false;
 	};
 	vars.CheckSplit.Add(func_collectibles);
-	Func<bool?> func_tags = () => {
-		var tag_allCollected = vars.watchers["TagAll"];
-		if (tag_allCollected.Changed && tag_allCollected.Current == 1 && tag_allCollected.Old == 0) {
-			vars.TrySplit("TagAll");
+	Func<bool?> func_usj = () => {
+		var usj_totalCompleted = vars.watchers["Completed Stunt JumpEach"];
+		if (usj_totalCompleted.Changed && usj_totalCompleted.Current > usj_totalCompleted.Old) {
+			vars.TrySplit("Completed Stunt JumpEach"+usj_totalCompleted.Current);
 		}
-		var tag_totalCollected = vars.watchers["TagEach"];
-		if (tag_totalCollected.Changed && tag_totalCollected.Current > tag_totalCollected.Old) {
-			vars.TrySplit("TagEach"+tag_totalCollected.Current);
+		var usj_totalfound = vars.watchers["Found Stunt JumpEach"];
+		if (usj_totalfound.Changed && usj_totalfound.Current > usj_totalfound.Old) {
+			vars.TrySplit("Found Stunt JumpEach"+usj_totalfound.Current);
 		}
-		else if (tag_totalCollected.Current >= 100) {
-			// Break out if everything's already collected.
+		else if (usj_totalCompleted.Old >= 70) {
+			// Break out if everything's done already.
 			return;
 		}
-		
-		// Check the UIDs & uncollection state of each pickup
-		bool tag_addressesCorrect = false;
-		byte tag_collectedNow = 255;
-		for (int i = 0; i < 100; i++) {
-			byte ii = vars.tag_ehgames_index[i];
-			if (i == 0 || i == 37 || i == 99) {
-				var id = vars.watchers["TagIdCheck"+i].Current;
-				if ((uint)id != vars.tag_identifiers_msb[i]) {
-					// This tag doesn't match. Trouble!
-					break;
-				}
-				if (i == 99) {
-					tag_addressesCorrect = true;
-				}
+
+		var usj_completedNow = 255;
+		var usj_foundNow = 255;
+		for (int i = 0; i < 70; i++) {
+			if (usj_completedNow < 70 || usj_foundNow < 70) {
+				break;
 			}
-			if (tag_collectedNow < 100) {
-				continue;
-			}
-			var collectionStatus = vars.watchers["TagSpecific"+ii];
-			if (collectionStatus.Changed && collectionStatus.Current >= 229 && collectionStatus.Old <= 228) {
+			var usj_status = vars.watchers["Stunt JumpSpecific"+i];
+			if (usj_status.Changed) {
 				// Collection status changed, Split!
-				// Provided the memory addresses are correct.
-				tag_collectedNow = ii;
-			}
-		}
-		if (tag_addressesCorrect) {
-			if (tag_collectedNow < 100) {
-				vars.TrySplit("TagSpecific"+tag_collectedNow);
-			}
-			return;
-		}
-		// Addresses changed. Purge everything
-		vars.DebugOutput("Tag Addresses Changed");
-		for (int i = 0; i < 100; i++) {
-			vars.watchers.Remove(vars.watchers["TagSpecific"+i]);
-			if (i == 0 || i == 37 || i == 99) {
-				vars.watchers.Remove(vars.watchers["TagIdCheck"+i]);
-			}
-		}
-		// Find new address
-		int tag_address = vars.ScanForAddress("48592B13??00000080592B13??000000"); // Memory for first two tags
-		if (tag_address > 0) {
-			vars.DebugOutput("New Address: "+tag_address.ToString("x")+" for tag 0");
-			for (var i = 0; i < 100; i++) {
-				vars.AddAddressWatcher(tag_address+0x4+i*0x8, "TagSpecific"+vars.tag_ehgames_index[i], 1, true);
-				if (i == 0 || i == 37 || i == 99) {
-					vars.AddAddressWatcher(tag_address+i*0x8, "TagIdCheck"+i, 2, true);
+				if (usj_status.Current == 256 && usj_status.Old == 0) {
+					usj_foundNow = i;
+				}
+				else if (usj_status.Current == 257 && usj_status.Old == 256) {
+					usj_completedNow = i;
 				}
 			}
 		}
-		return false;
+		if (usj_completedNow < 70) {
+			vars.TrySplit("Completed Stunt JumpSpecific"+usj_completedNow);
+		}
+		else if (usj_foundNow < 70) {
+			vars.TrySplit("Found Stunt JumpSpecific"+usj_foundNow);
+		}
+		return;
 	};
-	vars.CheckSplit.Add(func_tags);
+	vars.CheckSplit.Add(func_usj);
 
 	#endregion // Collectibles
 
@@ -2370,32 +2342,59 @@ init {
 			) { Name = "ScmLocal" + item.ToString() }
 		);
 	}
-	vars.watchScmMissionLocalVariables.Clear();
 
 	// Add other addresses (non-SCM stuff, eg stats entries)
-	for (int i = 0; i < vars.addressList_Name.Count; i++) {
-		// vars.DebugOutput("Adding watcher (miscS): " + vars.addressList_Name[i] + " 0x" + (vars.addressList_Address[i]+offset).ToString("x"));
-		switch ((int)vars.addressList_Bytes[i]) {
+	foreach (var tuple in vars.addressList) {
+		string tupleName = tuple.Item1;
+		int tupleType = tuple.Item2;
+		int tupleAddress = tuple.Item3;
+
+		switch (tupleType) {
 			case 1:
 				vars.watchers.Add(
 					new MemoryWatcher<byte>(
-						new DeepPointer(vars.addressList_Address[i]+offset)
-					) { Name = vars.addressList_Name[i] }
+						new DeepPointer(tupleAddress+offset)
+					) { Name = tupleName }
 				);
 				break;
 			case 2:
 				vars.watchers.Add(
 					new MemoryWatcher<short>(
-						new DeepPointer(vars.addressList_Address[i]+offset)
-					) { Name = vars.addressList_Name[i] }
+						new DeepPointer(tupleAddress+offset)
+					) { Name = tupleName }
 				);
 				break;
 			case 4:
 			default:
 				vars.watchers.Add(
 					new MemoryWatcher<int>(
-						new DeepPointer(vars.addressList_Address[i]+offset)
-					) { Name = vars.addressList_Name[i] }
+						new DeepPointer(tupleAddress+offset)
+					) { Name = tupleName }
+				);
+				break;
+		}
+	}
+
+	foreach (var tuple in vars.pointerList) {
+		string tupleName = tuple.Item1;
+		int tupleType = tuple.Item2;
+		DeepPointer tuplePointer = tuple.Item3;
+
+		switch (tupleType) {
+			case 1:
+				vars.watchers.Add(
+					new MemoryWatcher<byte>(tuplePointer) { Name = tupleName }
+				);
+				break;
+			case 2:
+				vars.watchers.Add(
+					new MemoryWatcher<short>(tuplePointer) { Name = tupleName }
+				);
+				break;
+			case 4:
+			default:
+				vars.watchers.Add(
+					new MemoryWatcher<int>(tuplePointer) { Name = tupleName }
 				);
 				break;
 		}
@@ -2403,36 +2402,37 @@ init {
 
 	// Add watchers for memory addresses that might change at some point.
 	Action AddDynamicWatchers = () => {
-		for (int i = 0; i < vars.dynamicAddressList_Name.Count; i++) {
-		// vars.DebugOutput("Adding watcher (miscD): " + vars.dynamicAddressList_Name[i] + " 0x" + (vars.dynamicAddressList_Address[i]+offset).ToString("x"));
-			switch ((int)vars.dynamicAddressList_Bytes[i]) {
+		foreach (var tuple in vars.addressListDynamic) {
+			string tupleName = tuple.Item1;
+			int tupleType = tuple.Item2;
+			int tupleAddress = tuple.Item3;
+
+			switch (tupleType) {
 				case 1:
 					vars.watchers.Add(
 						new MemoryWatcher<byte>(
-							new DeepPointer(vars.dynamicAddressList_Address[i]+offset)
-						) { Name = vars.dynamicAddressList_Name[i] }
+							new DeepPointer(tupleAddress+offset)
+						) { Name = tupleName }
 					);
 					break;
 				case 2:
 					vars.watchers.Add(
 						new MemoryWatcher<short>(
-							new DeepPointer(vars.dynamicAddressList_Address[i]+offset)
-						) { Name = vars.dynamicAddressList_Name[i] }
+							new DeepPointer(tupleAddress+offset)
+						) { Name = tupleName }
 					);
 					break;
 				case 4:
 				default:
 					vars.watchers.Add(
 						new MemoryWatcher<int>(
-							new DeepPointer(vars.dynamicAddressList_Address[i]+offset)
-						) { Name = vars.dynamicAddressList_Name[i] }
+							new DeepPointer(tupleAddress+offset)
+						) { Name = tupleName }
 					);
 					break;
 			}
 		}
-		vars.dynamicAddressList_Address.Clear();
-		vars.dynamicAddressList_Name.Clear();
-		vars.dynamicAddressList_Bytes.Clear();
+		vars.addressListDynamic.Clear();
 	};
 	vars.AddDynamicWatchers = AddDynamicWatchers;
 	AddDynamicWatchers();
