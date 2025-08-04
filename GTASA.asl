@@ -117,7 +117,7 @@ startup {
 	};
 	vars.AddPointerWatcher = AddPointerWatcher;
 	
-	#endregion
+	#endregion // Address Keeping
 	
 	//=============================================================================
 	// State keeping
@@ -150,10 +150,9 @@ startup {
 	settings.Add("Missions", true, "Story Missions");
 	settings.SetToolTip("Missions", "Missions with a visible-anywhere minimap marker until completion");
 
-	#endregion
+	#endregion // Main Missions
 	
 	#region Collectibles
-	
 	// Collectibles
 	//=============
 	// Collectibles are tracked in multiple ways:
@@ -603,8 +602,28 @@ startup {
 		return;
 	};
 	vars.CheckSplit.Add(func_usj);
-
 	#endregion // Collectibles
+
+	#region Other Settings
+	// Other Settings
+	//===============
+	settings.CurrentDefaultParent = null;
+	settings.Add("Settings", false);
+	settings.CurrentDefaultParent = "Settings";
+	settings.Add("startOnSaveLoad", false, "Start timer when loading save (experimental)");
+	settings.SetToolTip("startOnSaveLoad",
+		@"This may start the timer too early on New Game, however if you have Reset enabled, 
+ it should reset again before the desired start.");
+	settings.Add("startOnLoadFinish", false, "Start timer when loading finishes (before cutscene)");
+	settings.SetToolTip("startOnLoadFinish",
+        "Start the timer when the game finishes loading, before the cutscene begins, as opposed to upon skipping it." + 
+        "\nUseful for runs where waiting through the cutscene for a bit can affect gameplay factors." +
+        "\nOnly works consistently when starting from a full game restart." +
+        "\nWarning: Using this in combination with auto-reset is very prone to accidental resets eg. when accidentally clicking New Game instead of Load Game.");
+	settings.Add("doubleSplitPrevention", false, "Double-Split Prevention");
+	settings.SetToolTip("doubleSplitPrevention",
+        @"Impose cooldown of 2.5s between auto-splits.");
+	#endregion // Other Settings
 
 	#endregion // Settings
 
@@ -2177,23 +2196,6 @@ startup {
 	// 	"Regular splitting continues upon dropping off another fare or starting Interdiction after delivering a Slamvan."
 	// );
 
-	// Other Settings
-	//===============
-	settings.CurrentDefaultParent = null;
-	settings.Add("startOnSaveLoad", false, "Start timer when loading save (experimental)");
-	settings.SetToolTip("startOnSaveLoad",
-		@"This may start the timer too early on New Game, however if you have Reset enabled, 
- it should reset again before the desired start.");
-	settings.Add("startOnLoadFinish", false, "Start timer on load complete");
-	settings.SetToolTip("startOnLoadFinish",
-        "Start the timer when the game finishes loading, before the cutscene begins, as opposed to upon skipping it." + 
-        "\nUseful for runs where waiting through the cutscene for a bit can affect gameplay factors." +
-        "\nOnly works consistently when starting from a full game restart." +
-        "\nWarning: Using this in combination with auto-reset is very prone to accidental resets eg. when accidentally clicking New Game instead of Load Game.");
-	settings.Add("doubleSplitPrevention", false, "Double-Split Prevention");
-	settings.SetToolTip("doubleSplitPrevention",
-        @"Impose cooldown of 2.5s between auto-splits. This may not work for all types of splits.");
-
 	#endregion
 }
 
@@ -2560,7 +2562,7 @@ init {
 			vars.completedSplits.Add(splitId);
 			/*
 			 * Double split prevention (mostly for duping). This is set to 2.5s so that dupes should
-			 * (hopefully) not split spice, whereas close-on splits like the Deathwarp to Angel Pine
+			 * (hopefully) not split twice, whereas close-on splits like the Deathwarp to Angel Pine
 			 * after Body Harvest still do get split.
 			 *
 			 * Make sure to always add this to the already executed splits, so that cooldown-prevented
@@ -3627,18 +3629,20 @@ start {
 	// A rudimentary playtime check should do the trick in these cases.
     if (settings["startOnLoadFinish"]) {
 		if (intro_newgamestarted.Changed && intro_newgamestarted.Old == 0) {
-			vars.DebugOutput("Mission Initial started, New Game at "+playingTime.Current);
+			if (settings.StartEnabled) {
+				vars.DebugOutput("New Game (Mission Initial started), at "+playingTime.Current);
+			}
 			return true;
 		}
-		// TODO:
-		// else if (playingTime.Current < 1000 && playingTime.Old > 1000) {
-			// vars.DebugOutput("Game timer reset, New Game at "+playingTime.Current);
-			// return true;
-		// }
+		else if (playingTime.Current < 1000 && (playingTime.Old > 1000 || playingTime.Old == 0)) {
+			if (settings.StartEnabled) {
+				vars.DebugOutput("New Game (Game timer reset), at "+playingTime.Current);
+			}
+			return true;
+		}
 	}
-
-	// New Game
-	//=========
+	// Timer on cutscene skip or end
+	//==============================
 	// intro_state is a variable only used in the intro mission, changing to
 	// 1 when the cutscene is skipped. It gets set to other values during the
 	// intro cutscene. If the cutscene is watched in full, the value will change
@@ -3646,10 +3650,11 @@ start {
 	// 
 	// In the commonly used decompiled main.scm, this should be the variable $5353.
 	// 
-	else if (intro_state.Changed) {
+	else if (intro_state.Changed && playingTime.Current > 2000) {
 		if (intro_state.Current == 1 || (intro_state.Current == 0 && intro_state.Old == 3)) {
-			if (settings.StartEnabled)
-			vars.DebugOutput("Intro Cutscene Over, New Game at "+playingTime.Current);
+			if (settings.StartEnabled) {
+				vars.DebugOutput("New Game (Intro cutscene over), at "+playingTime.Current);
+			}
 			return true;
 		}
 	}
@@ -3660,25 +3665,18 @@ start {
 	// to only be true when loading a game initially (so not loading screens during
 	// the game).
 	//
-	// if (settings["startOnSaveLoad"] && !loading.Current && loading.Old)
-	// {
-	// 	vars.lastLoad = Environment.TickCount;
-	// 	if (settings.StartEnabled)
-	// 	{
-	// 		vars.DebugOutput("Loaded Save");
-	// 	}
-	// 	return true;
-	// }
+	if (settings["startOnSaveLoad"] && !loading.Current && loading.Old)
+	{
+		vars.lastLoad = Environment.TickCount;
+		if (settings.StartEnabled)
+		{
+			vars.DebugOutput("New Game (Loaded Save)");
+		}
+		return true;
+	}
 }
 
-reset
-{
-	//=============================================================================
-	// Resetting Timer
-	//=============================================================================
-
-	return false;
-
+reset {
 	var playingTime = vars.watchers["playingTime"];
 	var intro_newgamestarted = vars.watchers["intro_newgamestarted"];
 	var intro_state = vars.watchers["intro_state"];
@@ -3697,22 +3695,31 @@ reset
 	 * when e.g. starting a new game instead of loading a save even less a problem (because
 	 * you have enough time to ESC before the timer is reset).
 	 */
-	if (playingTime.Current > 240*1000) {
+
+	if (playingTime.Current > 240000) {
 		return false;
 	}
 
-    if (settings["startOnLoadFinish"] && intro_newgamestarted.Changed && intro_newgamestarted.Old == 0) {
-        return true;
-    }
-
-    if (!settings["startOnLoadFinish"] && intro_state.Current == 1 && intro_state.Old == 0 && playingTime.Current > 2000)
-	{
-		if (settings.ResetEnabled)
-		{
-			// Only output when actually resetting (the return value of this method
-			// is only respected by LiveSplit when the setting is actually enabled)
-			vars.DebugOutput("Reset");
+    if (settings["startOnLoadFinish"]) {
+		if (intro_newgamestarted.Changed && intro_newgamestarted.Old == 0) {
+			if (settings.ResetEnabled) {
+				vars.DebugOutput("Reset (Mission Initial started)");
+			}
+			return true;
 		}
-		return true;
+		else if (playingTime.Current < 1000 && (playingTime.Old > 1000 || playingTime.Old == 0)) {
+			if (settings.ResetEnabled) {
+				vars.DebugOutput("Reset (Game timer reset)");
+			}
+			return true;
+		}
+	}
+	else if (intro_state.Changed && playingTime.Current > 2000) {
+		if (intro_state.Current == 1 || (intro_state.Current == 0 && intro_state.Old == 3)) {
+			if (settings.ResetEnabled) {
+				vars.DebugOutput("Reset (Intro cutscene over)");
+			}
+			return true;
+		}
 	}
 }
