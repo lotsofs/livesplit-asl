@@ -93,26 +93,23 @@ startup {
 	vars.watchScmMissionLocalVariables = new List<int>();
 
 	// Non-SCM addresses (eg. Stats entries)
-	vars.addressList = new List<Tuple<string, int, int>>();
-	vars.addressListDynamic = new List<Tuple<string, int, int>>();
+	vars.nonScmAddresses = new List<Tuple<string, int, int>>();
+	vars.nonScmAddressesChanges = new List<Tuple<string, int, int>>();
 
 	// Pointer addresses
 	vars.pointerList = new List<Tuple<string, int, DeepPointer>>();
 
-	Action<int,string,int,bool> AddAddressWatcher = (address,name,bytes,dynamic) => {
-		if (dynamic) {
-			vars.DebugOutput("Preparing Watcher (miscD): " + name + " 0x" + address.ToString());
-			vars.addressListDynamic.Add(Tuple.Create(name, bytes, address));
-		}
-		else {
-			vars.DebugOutput("Preparing Watcher (miscS): " + name + " 0x" + address.ToString());
-			vars.addressList.Add(Tuple.Create(name, bytes, address));
-		}
+	Action<int,string,int> AddNonScmAddressWatcher = (address,name,bytes) => {
+		vars.nonScmAddresses.Add(Tuple.Create(name, bytes, address));
 	};
-	vars.AddAddressWatcher = AddAddressWatcher;
+	vars.AddNonScmAddressWatcher = AddNonScmAddressWatcher;
+
+	Action<int,string,int> ChangeNonScmAddressWatcher = (address,name,bytes) => {
+		vars.nonScmAddressesChanges.Add(Tuple.Create(name, bytes, address));
+	};
+	vars.ChangeNonScmAddressWatcher = ChangeNonScmAddressWatcher;
 
 	Action<DeepPointer,string,int> AddPointerWatcher = (pointer, name, bytes) => {
-		vars.DebugOutput("Preparing Pointer Watcher (miscP): " + name);
 		vars.pointerList.Add(Tuple.Create(name, bytes, pointer));
 	};
 	vars.AddPointerWatcher = AddPointerWatcher;
@@ -124,10 +121,9 @@ startup {
 	//=============================================================================
 
 	vars.completedSplits = new List<string>();	// Already split splits during this attempt (until timer reset)
-	vars.splitQueue = new List<string>();	// A queue to ensure splits are split one by one to prevent single-splitting when multiple are completed simultaneously.
+	vars.splitQueue = new Queue<string>();	// A queue to ensure splits are split one by one to prevent single-splitting when multiple are completed simultaneously.
 	vars.lastStartedMission = "";	// Most recently started mission thread. Resets on pass, but not on fail.
 	vars.skipSplits = false;	// Bool to track if splits should be skipped instead of splits (for deviating non-linear-esque routes.)
-	vars.PrevPhase = null;	// Track timer phase
 	vars.lastLoad = 0;		// Timestamp when the last load occured (load means loading from a save and such, not load screens)
 	vars.lastSplit = 0;		// Timestamp when the last split was executed (to prevent double-splits)
 	vars.waiting = false;	// Whether we should wait before splitting (eg game is still being loaded)
@@ -136,19 +132,103 @@ startup {
 	// Settings & Memory Addresses
 	//=============================================================================
 	// There are more memory addresses defined in `init` in the "Version Detection"
-	// and "Memory Watcher" sections.
+	// and "Memory Watcher" sections.  TODO: Confirm this
 
 	// Funcs to execute in the split check.
-	// These need to be funcs and not actions because actions here don't allow returning out
-	// The bool does nothing
-	vars.CheckSplit = new List<Func<bool?>>();
+	// Checks conditions, then if a condition is met, returns the ID of a split.
+	// If no conditions are met, return null.
+	vars.CheckSplit = new List<Func<string>>();
 
 	#region Settings 
 
 	#region Main Missions
 
+	// Main Missions
+	//==============
+
 	settings.Add("Missions", true, "Story Missions");
 	settings.SetToolTip("Missions", "Missions with a visible-anywhere minimap marker until completion");
+
+	settings.CurrentDefaultParent = "Missions";
+	settings.Add("LS", true, "Los Santos");
+	settings.Add("BL", true, "Badlands");
+	settings.Add("SF", true, "San Fierro");
+	settings.Add("Des", true, "Desert");
+	settings.Add("LV", true, "Las Venturas");
+	settings.Add("RTLS", true, "Return to Los Santos");
+	settings.CurrentDefaultParent = "LS";
+	settings.Add("LS_Intro", true, "Intro");
+	settings.Add("LS_Sweet", true, "Sweet");
+	settings.Add("LS_Smoke", true, "Big Smoke");
+	settings.Add("LS_Ogloc", true, "OG Loc");
+	settings.Add("LS_Ryder", true, "Ryder");
+	settings.Add("LS_Crash", true, "C.R.A.S.H.");
+	settings.Add("LS_Cesar", true, "Cesar");
+	settings.Add("LS_Final", true, "Finale");
+	settings.CurrentDefaultParent = "BL";
+	settings.Add("BL_Intro", true, "Trailer Park");
+	settings.Add("BL_Catalina", true, "Catalina");
+	settings.Add("BL_Cesar", true, "Cesar");
+	settings.Add("BL_Truth", true, "The Truth");
+	settings.CurrentDefaultParent = "SF";
+	settings.Add("SF_Main", true, "Garage / Syndicate");
+	settings.Add("SF_Wuzimu", true, "Woozie");
+	settings.Add("SF_Zero", true, "Zero");
+	settings.CurrentDefaultParent = "Des";
+	settings.Add("Des_Toreno", true, "Toreno");
+	settings.Add("Des_WangCars", true, "Wang Cars");
+	settings.CurrentDefaultParent = "LV";
+	settings.Add("LV_AirStrip", true, "Air Strip");
+	settings.Add("LV_Casino", true, "Casino");
+	settings.Add("LV_Crash", true, "C.R.A.S.H.");
+	settings.Add("LV_MaddDogg", true, "Madd Dogg");
+	settings.Add("LV_Heist", true, "Heist");
+	settings.CurrentDefaultParent = "RTLS";
+	settings.Add("RTLS_Mansion", true, "Mansion");
+	settings.Add("RTLS_Grove", true, "Grove");
+	settings.Add("RTLS_Riot", true, "Finale");
+
+
+	#region In the Beginning
+	settings.Add("intro", false, "In the Beginning", "LS_Intro");
+	settings.CurrentDefaultParent = "intro";
+	settings.Add("intro_cutsceneEnd", false, "Cutscene skipped or finished", "intro");
+	settings.Add("intro_passed", false, "Bicycle entered or abandoned", "intro");
+	settings.Add("intro_groveStreet", false, "\"Grove Street - Home\" line played", "intro");
+
+	vars.watchScmGlobalVariables.Add(5353, "intro_cutsceneState");
+	vars.watchScmGlobalVariables.Add(24, "intro_passed");		// $MISSION_INTRO_PASSED
+	vars.watchScmGlobalVariables.Add(54, "intro_groveStreet");	// $HELP_INTRO_SHOWN
+	// important: newGameStarted is used in general splitting behavior
+	// to see whether the game has started and avoid dud splits.
+	// it gets set immediately to 1, is never used, and gets set 
+	// back to 0 during Flight School & Dam and Blast.
+	vars.watchScmGlobalVariables.Add(1510, "intro_newGameStarted");
+
+	Func<string> func_intro = () => {
+		var intro_cutsceneState = vars.watchers["intro_cutsceneState"];
+		var playingTime = vars.watchers["playingTime"];
+		if (intro_cutsceneState.Changed && playingTime.Current > 2000) {
+			if (intro_cutsceneState.Current == 1 || (intro_cutsceneState.Current == 0 && intro_cutsceneState.Old == 3)) {
+				return "intro_cutsceneEnd";
+			}
+		}
+		// intro_passed gets set when the player enters the bike, moves the bike,
+		// or leaves the starting area. In other words: Anything that makes the 
+		// blue arrow over the bicycle disappear.
+		var intro_passed = vars.watchers["intro_passed"];
+		if (intro_passed.Changed && intro_passed.Current == 1) {
+			return "intro_passed";
+		}
+		var intro_groveStreet = vars.watchers["intro_groveStreet"];
+		if (intro_groveStreet.Changed && intro_groveStreet.Current == 1) {
+			return "intro_groveStreet";
+		}
+		return null;
+	};
+	vars.CheckSplit.Add(func_intro);
+	#endregion // In the Beginning
+
 
 	#endregion // Main Missions
 	
@@ -370,19 +450,19 @@ startup {
 
 	// Add watchers for individual tags
 	for (int i = 0; i < 100; i++) {
-		vars.AddAddressWatcher(0x69A8C0+0x4+i*0x8, "TagSpecific"+i, 1, true);
+		vars.AddNonScmAddressWatcher(0x69A8C0+0x4+i*0x8, "TagSpecific"+i, 1);
 	}
 	// Add watchers for individual pickup collectibles
 	for (int i = 0; i < 150; i++) {
 		var b = 0x578EE4;
-		vars.AddAddressWatcher(b+0xC+i*0x20, "CollectibleIdCheck"+i, 4, true);
+		vars.AddNonScmAddressWatcher(b+0xC+i*0x20, "CollectibleIdCheck"+i, 4);
 		if (i < 50 || i >= 100) {
 			// Horseshoes, Oysters
-			vars.AddAddressWatcher(b+0x19+i*0x20, "CollectibleSpecific"+i, 1, true);
+			vars.AddNonScmAddressWatcher(b+0x19+i*0x20, "CollectibleSpecific"+i, 1);
 		}
 		else {
 			// Snapshots
-			vars.AddAddressWatcher(b+0x18+i*0x20, "CollectibleSpecific"+i, 1, true);
+			vars.AddNonScmAddressWatcher(b+0x18+i*0x20, "CollectibleSpecific"+i, 1);
 		}
 	}
 	// Add watchers for unique stunt jumps
@@ -391,26 +471,26 @@ startup {
 		vars.AddPointerWatcher(p, "Stunt JumpSpecific"+i, 2);
 	}
 	// Add watchers for # collected (regardless of which)
-	vars.AddAddressWatcher(0x69AD74, "TagEach", 1, false);
-	vars.AddAddressWatcher(0x7791E4, "HorseshoeEach", 1, false);
-	vars.AddAddressWatcher(0x7791BC, "SnapshotEach", 1, false);
-	vars.AddAddressWatcher(0x7791EC, "OysterEach", 1, false);
-	vars.AddAddressWatcher(0x779064, "Completed Stunt JumpEach", 1, false);
-	vars.AddAddressWatcher(0x779060, "Found Stunt JumpEach", 1, false);
+	vars.AddNonScmAddressWatcher(0x69AD74, "TagEach", 1);
+	vars.AddNonScmAddressWatcher(0x7791E4, "HorseshoeEach", 1);
+	vars.AddNonScmAddressWatcher(0x7791BC, "SnapshotEach", 1);
+	vars.AddNonScmAddressWatcher(0x7791EC, "OysterEach", 1);
+	vars.AddNonScmAddressWatcher(0x779064, "Completed Stunt JumpEach", 1);
+	vars.AddNonScmAddressWatcher(0x779060, "Found Stunt JumpEach", 1);
 	// Add watchers for collectible rewards given (USJ have none)
 	vars.watchScmGlobalVariables.Add(1519, "TagAll"); // $ALL_TAGS_SPRAYED	
 	vars.watchScmGlobalVariables.Add(1517, "HorseshoeAll"); // $ALL_HORSESHOES_COLLECTED	
 	vars.watchScmGlobalVariables.Add(1518, "SnapshotAll"); // $ALL_PHOTOS_TAKEN	
 	vars.watchScmGlobalVariables.Add(1516, "OysterAll"); // $ALL_OUSTERS_COLLECTED	
 	
-	Func<bool?> func_tags = () => {
+	Func<string> func_tags = () => {
 		var tag_allCollected = vars.watchers["TagAll"];
 		if (tag_allCollected.Changed && tag_allCollected.Current == 1 && tag_allCollected.Old == 0) {
-			vars.TrySplit("TagAll");
+			return "TagAll";
 		}
 		var tag_totalCollected = vars.watchers["TagEach"];
 		if (tag_totalCollected.Changed && tag_totalCollected.Current > tag_totalCollected.Old) {
-			vars.TrySplit("TagEach"+tag_totalCollected.Current);
+			return "TagEach"+tag_totalCollected.Current;
 		}
 		else if (tag_totalCollected.Old >= 100) {
 			// Break out if everything's already collected.
@@ -430,37 +510,36 @@ startup {
 			}
 		}
 		if (tag_collectedNow < 100) {
-			vars.TrySplit("TagSpecific"+tag_collectedNow);
+			return "TagSpecific"+tag_collectedNow;
 		}
 		return;
-		return false;
 	};
 	vars.CheckSplit.Add(func_tags);
-	Func<bool?> func_collectibles = () => {
+	Func<string> func_collectibles = () => {
 		var horseshoe_allCollected = vars.watchers["HorseshoeAll"];
 		var snapshot_allCollected = vars.watchers["SnapshotAll"];
 		var oyster_allCollected = vars.watchers["OysterAll"];
 		if (horseshoe_allCollected.Changed && horseshoe_allCollected.Current == 1 && horseshoe_allCollected.Old == 0) {
-			vars.TrySplit("HorseshoeAll");
+			return "HorseshoeAll";
 		}
 		else if (snapshot_allCollected.Changed && snapshot_allCollected.Current == 1 && snapshot_allCollected.Old == 0) {
-			vars.TrySplit("SnapshotAll");
+			return "SnapshotAll";
 		}	
 		else if (oyster_allCollected.Changed && oyster_allCollected.Current == 1 && oyster_allCollected.Old == 0) {
-			vars.TrySplit("OysterAll");
+			return "OysterAll";
 		}
 		var horseshoe_totalCollected = vars.watchers["HorseshoeEach"];
 		var snapshot_totalCollected = vars.watchers["SnapshotEach"];
 		var oyster_totalCollected = vars.watchers["OysterEach"];
 		var collectibles_totalCollected = horseshoe_totalCollected.Old+snapshot_totalCollected.Old+oyster_totalCollected.Old;
 		if (horseshoe_totalCollected.Changed && horseshoe_totalCollected.Current > horseshoe_totalCollected.Old) {
-			vars.TrySplit("HorseshoeEach"+horseshoe_totalCollected.Current);
+			return "HorseshoeEach"+horseshoe_totalCollected.Current;
 		}
 		else if (snapshot_totalCollected.Changed && snapshot_totalCollected.Current > snapshot_totalCollected.Old) {
-			vars.TrySplit("SnapshotEach"+snapshot_totalCollected.Current);
+			return "SnapshotEach"+snapshot_totalCollected.Current;
 		}
 		else if (oyster_totalCollected.Changed && oyster_totalCollected.Current > oyster_totalCollected.Old) {
-			vars.TrySplit("OysterEach"+oyster_totalCollected.Current);
+			return "OysterEach"+oyster_totalCollected.Current;
 		}
 		else if (collectibles_totalCollected >= 150) {
 			// Break out if everything's already collected.
@@ -511,11 +590,6 @@ startup {
 		// If the number of correct addresses is lower than what it should be. Purge everything and rebuild.
 		if (collectible_addressesIncorrect > collectibles_totalCollected) {
 			vars.DebugOutput("Collectible Addresses Changed");
-			// Purge
-			for (int i = 0; i < 150; i++) {
-				vars.watchers.Remove(vars.watchers["CollectibleSpecific"+i]);
-				vars.watchers.Remove(vars.watchers["CollectibleIdCheck"+i]);
-			}
 			// Find new address
 			int collectible_firstAddress = 0;
 			for (int i = 0; i < 150; i++) {
@@ -543,33 +617,33 @@ startup {
 			}
 			// Register new addresses
 			for (int i = 0; i < 150; i++) {
-				vars.AddAddressWatcher(collectible_firstAddress+0xC+i*0x20, "CollectibleIdCheck"+i, 4, true);
+				vars.ChangeNonScmAddressWatcher(collectible_firstAddress+0xC+i*0x20, "CollectibleIdCheck"+i, 4);
 				if (i < 50 || i >= 100) {
 					// Horseshoes, Oysters
-					vars.AddAddressWatcher(collectible_firstAddress+0x19+i*0x20, "CollectibleSpecific"+i, 1, true);
+					vars.ChangeNonScmAddressWatcher(collectible_firstAddress+0x19+i*0x20, "CollectibleSpecific"+i, 1);
 				}
 				else {
 					// Snapshots
-					vars.AddAddressWatcher(collectible_firstAddress+0x18+i*0x20, "CollectibleSpecific"+i, 1, true);
+					vars.ChangeNonScmAddressWatcher(collectible_firstAddress+0x18+i*0x20, "CollectibleSpecific"+i, 1);
 				}
 			}
 			return;
 		}
 		// A collectible was collected. Split it.
 		if (collectible_collectedNow < 150) {
-			vars.TrySplit("CollectibleSpecific"+collectible_collectedNow);
+			return "CollectibleSpecific"+collectible_collectedNow;
 		}
-		return false;
+		return;
 	};
 	vars.CheckSplit.Add(func_collectibles);
-	Func<bool?> func_usj = () => {
+	Func<string> func_usj = () => {
 		var usj_totalCompleted = vars.watchers["Completed Stunt JumpEach"];
 		if (usj_totalCompleted.Changed && usj_totalCompleted.Current > usj_totalCompleted.Old) {
-			vars.TrySplit("Completed Stunt JumpEach"+usj_totalCompleted.Current);
+			return "Completed Stunt JumpEach"+usj_totalCompleted.Current;
 		}
 		var usj_totalfound = vars.watchers["Found Stunt JumpEach"];
 		if (usj_totalfound.Changed && usj_totalfound.Current > usj_totalfound.Old) {
-			vars.TrySplit("Found Stunt JumpEach"+usj_totalfound.Current);
+			return "Found Stunt JumpEach"+usj_totalfound.Current;
 		}
 		else if (usj_totalCompleted.Old >= 70) {
 			// Break out if everything's done already.
@@ -594,10 +668,10 @@ startup {
 			}
 		}
 		if (usj_completedNow < 70) {
-			vars.TrySplit("Completed Stunt JumpSpecific"+usj_completedNow);
+			return "Completed Stunt JumpSpecific"+usj_completedNow;
 		}
 		else if (usj_foundNow < 70) {
-			vars.TrySplit("Found Stunt JumpSpecific"+usj_foundNow);
+			return "Found Stunt JumpSpecific"+usj_foundNow;
 		}
 		return;
 	};
@@ -608,17 +682,14 @@ startup {
 	// Other Settings
 	//===============
 	settings.CurrentDefaultParent = null;
-	settings.Add("Settings", false);
+	settings.Add("Settings", true);
 	settings.CurrentDefaultParent = "Settings";
-	settings.Add("startOnSaveLoad", false, "Start timer when loading save (experimental)");
-	settings.SetToolTip("startOnSaveLoad",
-		@"This may start the timer too early on New Game, however if you have Reset enabled, 
- it should reset again before the desired start.");
+	settings.Add("startOnSaveLoad", false, "Start timer when loading save");
+	settings.Add("resetOnSaveLoad", false, "Reset timer when loading save");
 	settings.Add("startOnLoadFinish", false, "Start timer when loading finishes (before cutscene)");
 	settings.SetToolTip("startOnLoadFinish",
         "Start the timer when the game finishes loading, before the cutscene begins, as opposed to upon skipping it." + 
         "\nUseful for runs where waiting through the cutscene for a bit can affect gameplay factors." +
-        "\nOnly works consistently when starting from a full game restart." +
         "\nWarning: Using this in combination with auto-reset is very prone to accidental resets eg. when accidentally clicking New Game instead of Load Game.");
 	settings.Add("doubleSplitPrevention", false, "Double-Split Prevention");
 	settings.SetToolTip("doubleSplitPrevention",
@@ -628,6 +699,8 @@ startup {
 	#endregion // Settings
 
 	#region OLD_SHIT
+
+	#region mission lists
 
 	// Missions
 	//=========
@@ -1043,7 +1116,6 @@ startup {
 	// Misc boolean values
 	//====================
 	vars.missions4 = new Dictionary<int, string> {
-		{ 6592864 + (54 * 4), "itb_grovestreethome" }, // $HELP_INTRO_SHOWN
 		{ 6592864 + (162 * 4), "pimping_started" },
 	};
 
@@ -1185,33 +1257,9 @@ startup {
 		// "valet",	// Valet / 555 We Tip / General being near the valet building
 	};
 
+	#endregion
+
 	#region utility
-
-	//=============================================================================
-	// State keeping
-	//=============================================================================
-
-	// Already split splits during this attempt (until timer reset)
-	vars.completedSplits = new List<string>();
-
-	// Splits that are about to be done
-	vars.splitQueue = new List<string>();
-
-	// Most recently started mission thread. Resets on pass, but not on fail.
-	vars.lastStartedMission = "";
-
-	// Bool to track if splits should be skipped instead of splits (for deviating non-linear-esque routes.)
-	vars.skipSplits = false;
-
-	// Track timer phase
-	vars.PrevPhase = null;
-
-	// Timestamp when the last load occured (load means loading from a save
-	// and such, not load screens)
-	vars.lastLoad = 0;
-
-	// Timestamp when the last split was executed (to prevent double-splits)
-	vars.lastSplit = 0;
 
 	//=============================================================================
 	// Settings
@@ -1338,50 +1386,6 @@ startup {
     #region Main Missions
 
 	return;
-
-	// Main Missions
-	//==============
-
-	settings.CurrentDefaultParent = "Missions";
-	settings.Add("LS", true, "Los Santos");
-	settings.Add("BL", true, "Badlands");
-	settings.Add("SF", true, "San Fierro");
-	settings.Add("Des", true, "Desert");
-	settings.Add("LV", true, "Las Venturas");
-	settings.Add("RTLS", true, "Return to Los Santos");
-	settings.CurrentDefaultParent = "LS";
-	settings.Add("LS_Intro", true, "Intro");
-	settings.Add("LS_Sweet", true, "Sweet");
-	settings.Add("LS_Smoke", true, "Big Smoke");
-	settings.Add("LS_Ogloc", true, "OG Loc");
-	settings.Add("LS_Ryder", true, "Ryder");
-	settings.Add("LS_Crash", true, "C.R.A.S.H.");
-	settings.Add("LS_Cesar", true, "Cesar");
-	settings.Add("LS_Final", true, "Finale");
-	settings.CurrentDefaultParent = "BL";
-	settings.Add("BL_Intro", true, "Trailer Park");
-	settings.Add("BL_Catalina", true, "Catalina");
-	settings.Add("BL_Cesar", true, "Cesar");
-	settings.Add("BL_Truth", true, "The Truth");
-	settings.CurrentDefaultParent = "SF";
-	settings.Add("SF_Main", true, "Garage / Syndicate");
-	settings.Add("SF_Wuzimu", true, "Woozie");
-	settings.Add("SF_Zero", true, "Zero");
-	settings.CurrentDefaultParent = "Des";
-	settings.Add("Des_Toreno", true, "Toreno");
-	settings.Add("Des_WangCars", true, "Wang Cars");
-	settings.CurrentDefaultParent = "LV";
-	settings.Add("LV_AirStrip", true, "Air Strip");
-	settings.Add("LV_Casino", true, "Casino");
-	settings.Add("LV_Crash", true, "C.R.A.S.H.");
-	settings.Add("LV_MaddDogg", true, "Madd Dogg");
-	settings.Add("LV_Heist", true, "Heist");
-	settings.CurrentDefaultParent = "RTLS";
-	settings.Add("RTLS_Mansion", true, "Mansion");
-	settings.Add("RTLS_Grove", true, "Grove");
-	settings.Add("RTLS_Riot", true, "Finale");
-
-	settings.CurrentDefaultParent = null;
 	
 	// Los Santos
 	//-----------
@@ -1403,10 +1407,6 @@ startup {
 	addMissionList("LS_Final", new List<string>() { "Reuniting the Families"});
 	addMissionList("LS_Crash", new List<string>() { "Burning Desire", "Gray Imports"});
 	// addMissionList("LS_Cesar", new List<string>() { "High Stakes Lowrider" });
-
-	// In the Beginning
-	settings.Add("itb", false, "In the Beginning", "LS_Intro");
-	settings.Add("itb_cutsceneskipped", false, "Cutscene skipped", "itb");
 
 	// Big Smoke
 	settings.Add("bs", true, "Big Smoke", "LS_Intro");
@@ -2105,7 +2105,6 @@ startup {
 	settings.SetToolTip("100% Achieved", "Split when the game has given all rewards for 100%. This is checked every 3 seconds, and then given 2 seconds later.");
 	settings.Add("Plane Flight", false);
 	settings.SetToolTip("Plane Flight", "Splits when entering the ticket machine marker for the first time");
-	addMission4Custom("itb_grovestreethome", true, "\"Grove Street - Home\" line played", "Other");
 
 	// Gang Territories
 	//-----------------
@@ -2301,17 +2300,12 @@ init {
 	scmMissionLocalVarOffset += offset;
 	#endregion
 
-	//============================================================================	
-	// Extra addresses
-	//============================================================================
-	vars.watchScmGlobalVariables.Add(5353, "intro_state");
-	vars.watchScmGlobalVariables.Add(1510, "intro_newgamestarted");
-	vars.watchScmGlobalVariables.Add(24, "intro_passed");	// $MISSION_INTRO_PASSED
-
 	//=============================================================================
 	// Memory Watcher
 	//=============================================================================
 	var baseModule = modules.First();
+	
+	// Scan for an unknown address
 	Func<string, int> ScanForAddress = targetStr => {
 		var scanner = new SignatureScanner(game, baseModule.BaseAddress, baseModule.ModuleMemorySize);
 		var target = new SigScanTarget(targetStr);
@@ -2320,36 +2314,55 @@ init {
 	};
 	vars.ScanForAddress = ScanForAddress;
 
+	// Change watchers if an address is marked as changed
+	Action ChangeAddressWatchers = () => {
+		foreach (var tuple in vars.nonScmAddressesChanges) {
+			
+			string tupleName = tuple.Item1;
+			int tupleType = tuple.Item2;
+			int tupleAddress = tuple.Item3;
+			//vars.DebugOutput("Changing Watcher (chng): " + tupleName + " 0x" + tupleAddress.ToString());
+
+			vars.watchers.Remove(vars.watchers[tupleName]);
+			switch (tupleType) {
+				case 1:
+					vars.watchers.Add(
+						new MemoryWatcher<byte>(
+							new DeepPointer(tupleAddress+offset)
+						) { Name = tupleName }
+					);
+					break;
+				case 2:
+					vars.watchers.Add(
+						new MemoryWatcher<short>(
+							new DeepPointer(tupleAddress+offset)
+						) { Name = tupleName }
+					);
+					break;
+				case 4:
+				default:
+					vars.watchers.Add(
+						new MemoryWatcher<int>(
+							new DeepPointer(tupleAddress+offset)
+						) { Name = tupleName }
+					);
+					break;
+			}
+		}
+		vars.nonScmAddressesChanges.Clear();
+	};
+	vars.ChangeAddressWatchers = ChangeAddressWatchers;
+
 	// Add missions as watched memory values
 	vars.watchers = new MemoryWatcherList();
-
-	// Add all the global var watchers ($xxxx)
-	//		0x649960 + v * 0x4
-	foreach (var item in vars.watchScmGlobalVariables) {
-		vars.DebugOutput("Adding watcher (scmGl): 0x" + item.Key.ToString("x") + " " + item.Value);
-		vars.watchers.Add(
-			new MemoryWatcher<int>(
-				new DeepPointer(item.Key+scmGlobVarOffset+offset)
-			) { Name = item.Value.ToString() }
-		);
-	}
-	// Add all the mission local var watchers (xx@)
-	// All mission local variables are actually global. Located at 
-	//   	0xA48960 + v * 0x4
-	foreach (var item in vars.watchScmMissionLocalVariables) {
-		vars.DebugOutput("Adding watcher (scmLc): 0x" + item.ToString("x") + " ScmLocal " + item);
-		vars.watchers.Add(
-			new MemoryWatcher<int>(
-				new DeepPointer(item+scmMissionLocalVarOffset+offset)
-			) { Name = "ScmLocal" + item.ToString() }
-		);
-	}
+	vars.DebugOutput("Watcher List Cleared");
 
 	// Add other addresses (non-SCM stuff, eg stats entries)
-	foreach (var tuple in vars.addressList) {
+	foreach (var tuple in vars.nonScmAddresses) {
 		string tupleName = tuple.Item1;
 		int tupleType = tuple.Item2;
 		int tupleAddress = tuple.Item3;
+		vars.DebugOutput("Adding Watcher (misc): " + tupleName + " 0x" + tupleAddress.ToString());
 
 		switch (tupleType) {
 			case 1:
@@ -2377,10 +2390,12 @@ init {
 		}
 	}
 
+	// Add pointers
 	foreach (var tuple in vars.pointerList) {
 		string tupleName = tuple.Item1;
 		int tupleType = tuple.Item2;
 		DeepPointer tuplePointer = tuple.Item3;
+		vars.DebugOutput("Adding Pointer Watcher (pntr): " + tupleName);
 
 		switch (tupleType) {
 			case 1:
@@ -2402,42 +2417,29 @@ init {
 		}
 	}
 
-	// Add watchers for memory addresses that might change at some point.
-	Action AddDynamicWatchers = () => {
-		foreach (var tuple in vars.addressListDynamic) {
-			string tupleName = tuple.Item1;
-			int tupleType = tuple.Item2;
-			int tupleAddress = tuple.Item3;
-
-			switch (tupleType) {
-				case 1:
-					vars.watchers.Add(
-						new MemoryWatcher<byte>(
-							new DeepPointer(tupleAddress+offset)
-						) { Name = tupleName }
-					);
-					break;
-				case 2:
-					vars.watchers.Add(
-						new MemoryWatcher<short>(
-							new DeepPointer(tupleAddress+offset)
-						) { Name = tupleName }
-					);
-					break;
-				case 4:
-				default:
-					vars.watchers.Add(
-						new MemoryWatcher<int>(
-							new DeepPointer(tupleAddress+offset)
-						) { Name = tupleName }
-					);
-					break;
-			}
-		}
-		vars.addressListDynamic.Clear();
-	};
-	vars.AddDynamicWatchers = AddDynamicWatchers;
-	AddDynamicWatchers();
+	// Add all the SCM global var watchers ($xxxx)
+	//		0x649960 + v * 0x4
+	foreach (var item in vars.watchScmGlobalVariables) {
+		var address = item.Key*4+scmGlobVarOffset+offset;
+		vars.DebugOutput("Adding watcher (scmG): 0x" + address.ToString("x") + " $" + item.Key.ToString() + " " + item.Value);
+		vars.watchers.Add(
+			new MemoryWatcher<int>(
+				new DeepPointer(address)
+			) { Name = item.Value.ToString() }
+		);
+	}
+	// Add all the SCM mission local var watchers (xx@)
+	// All mission local variables are actually global. Located at 
+	//   	0xA48960 + v * 0x4
+	foreach (var item in vars.watchScmMissionLocalVariables) {
+		var address = item.Key*4+scmMissionLocalVarOffset+offset;
+		vars.DebugOutput("Adding watcher (scmL): 0x" + address.ToString("x") + " ScmLocal @" + item);
+		vars.watchers.Add(
+			new MemoryWatcher<int>(
+				new DeepPointer(address)
+			) { Name = "ScmLocal" + item.ToString() }
+		);
+	}
 	
 	// Add global variables for mid-mission events
 	vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(6592864 + (802 * 4)+offset)) { Name = "100%_achieved" }); // $_100_PERCENT_COMPLETE
@@ -2534,8 +2536,6 @@ init {
 		vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(address)) { Name = "export"+i });
 	}
 
-	vars.watchers.UpdateAll(game);
-
 	//=============================================================================	
 	// Utility functions
 	//=============================================================================
@@ -2571,7 +2571,7 @@ init {
 			if (!settings["doubleSplitPrevention"] || Environment.TickCount - vars.lastSplit > 2500) {
 				vars.DebugOutput("Split: "+splitId);
 				vars.lastSplit = Environment.TickCount;
-				vars.splitQueue.Add(splitId);
+				vars.splitQueue.Enqueue(splitId);
 				return true;
 			}
 			else {
@@ -2661,29 +2661,24 @@ update {
 		return false;
 	}
 
-	vars.AddDynamicWatchers();
+	vars.ChangeAddressWatchers();
 	
 	// Update always, to prevent splitting after loading (if possible, doesn't seem to be 100% reliable)
 	vars.watchers.UpdateAll(game);
+}
 
+onReset {
 	// Clear list of already executed splits if timer is reset
-	if (timer.CurrentPhase != vars.PrevPhase)
-	{
-		if (timer.CurrentPhase == TimerPhase.NotRunning)
-		{
-			vars.completedSplits.Clear();
-			vars.splitQueue.Clear();
-			vars.lastStartedMission = "";
-			vars.skipSplits = false;
-			vars.DebugOutput("Cleared list of already executed splits");
-		}
-		vars.PrevPhase = timer.CurrentPhase;
-	}
+	vars.completedSplits.Clear();
+	vars.splitQueue.Clear();
+	vars.lastStartedMission = "";
+	vars.skipSplits = false;
+	vars.DebugOutput("Cleared list of already executed splits");
 }
 
 split {
 	var playingTime = vars.watchers["playingTime"];
-	var intro_newgamestarted = vars.watchers["intro_newgamestarted"];
+	var intro_newGameStarted = vars.watchers["intro_newGameStarted"];
 	var intro_passed = vars.watchers["intro_passed"];
 	
 	#region Split prevention
@@ -2695,11 +2690,18 @@ split {
 		vars.lastLoad = Environment.TickCount;
 		return false;
 	}
-	if (Environment.TickCount - vars.lastLoad < 500 || playingTime.Current < 500 || (intro_newgamestarted.Current == 0 && intro_passed.Current == 0)) {
+	if (intro_newGameStarted.Current == 0 && intro_passed.Current == 0) {
+		// Prevent splitting while in the main menu
+		if (!vars.waiting) {
+			vars.DebugOutput("Wait..");
+			vars.waiting = true;
+		}
+		return false;
+	}
+	if (Environment.TickCount - vars.lastLoad < 600 || playingTime.Current < 600) {
 		// Prevent splitting shortly after loading from a save, since this can
 		// sometimes occur because memory values change
-		if (!vars.waiting)
-		{
+		if (!vars.waiting) {
 			vars.DebugOutput("Wait..");
 			vars.waiting = true;
 		}
@@ -2712,8 +2714,23 @@ split {
 	}
 	#endregion
 
-	foreach (Func<bool?> f in vars.CheckSplit) {
-		f();
+	foreach (Func<string> f in vars.CheckSplit) {
+		var split = f();
+		if (!string.IsNullOrEmpty(split)) {
+			vars.TrySplit(split);
+		}
+	}
+
+	// Split
+	if (vars.splitQueue.Count > 0) {
+		vars.splitQueue.Dequeue();
+		if (vars.skipSplits) {
+			vars.DebugOutput("Skipping split");
+			vars.timerModel.SkipSplit();
+		}
+		else {
+			return true;
+		}
 	}
 
 	return false;
@@ -3140,14 +3157,6 @@ split {
 		{
 			vars.TrySplit("Export "+vars.exportLists[exportList][vehicleId]);
 		}
-	}
-	#endregion
-	#region In the beginning
-	//=================
-	// Cutscene skipped
-	var intro_state = vars.watchers["intro_state"];
-    if (intro_state.Current == 1 && intro_state.Old == 0 && playingTime.Current > 2000 && playingTime.Current < 60*1000) {
-		vars.TrySplit("itb_cutsceneskipped");
 	}
 	#endregion
 	#region Kickstart
@@ -3583,18 +3592,6 @@ split {
 			vars.DebugOutput("End skipping splits");
 		}
 	}
-
-	// Split
-	if (vars.splitQueue.Count > 0) {
-		vars.splitQueue.RemoveAt(0);
-		if (vars.skipSplits) {
-			vars.DebugOutput("Skipping split");
-			vars.timerModel.SkipSplit();
-		}
-		else {
-			return true;
-		}
-	}
 }
 
 start {
@@ -3603,8 +3600,7 @@ start {
 	//=============================================================================
 
 	var playingTime = vars.watchers["playingTime"];
-	var intro_newgamestarted = vars.watchers["intro_newgamestarted"];
-	var intro_state = vars.watchers["intro_state"];
+	var intro_cutsceneState = vars.watchers["intro_cutsceneState"];
 	var loading = vars.watchers["loading"];
 
 	/*
@@ -3622,36 +3618,48 @@ start {
 
     // Timer start before cutscene
     //============================
-	// intro_newgamestarted gets set to 1 almost first thing in the INITIAL thread. It never gets used for anything but gets
-	// set to 0 during Learning to Fly and Dam and Blast only. Start the timer when this value gets set.
-	// The variable in question is commonly known as $1510. 
-	// Note: This does not consistently activate when doing new game from the pause menu.
-	// A rudimentary playtime check should do the trick in these cases.
+	// A rudimentary playtime check should do the trick. Once it starts ticking up, that's when we
+	// start ticking as well. It gets set to a fixed 300 during the main menu, and 301/302 during the loading.
+	// When the loading finishes (bar disappears, fadeout starts) the timer gets set to 0 for a frame, then to 
+	// 300 again, then when the game begins proper it gets set to a value of 600 and counts from there.
+	// if the game is restarted from the pause menu, the timer acts as expected, starting from 0.
     if (settings["startOnLoadFinish"]) {
-		if (intro_newgamestarted.Changed && intro_newgamestarted.Old == 0) {
-			if (settings.StartEnabled) {
-				vars.DebugOutput("New Game (Mission Initial started), at "+playingTime.Current);
+		if (playingTime.Current == 300 && playingTime.Old == 0) {
+			// Main menu loaded
+			return false;
+		}
+		if ((playingTime.Current == 302 || playingTime.Current == 301) && playingTime.Old == 300) {
+			// Starting or loading game from main menu
+			return false;
+		}
+		if (playingTime.Current > playingTime.Old && playingTime.Old > 300) {
+			// Regular timer tick
+			return false;
+		}
+		if (playingTime.Current >= 600 && playingTime.Old == 300) {
+			if (settings.ResetEnabled) {
+				vars.DebugOutput("New Game (Game timer start from Main Menu), at "+playingTime.Current);
 			}
 			return true;
 		}
-		else if (playingTime.Current < 1000 && (playingTime.Old > 1000 || playingTime.Old == 0)) {
-			if (settings.StartEnabled) {
-				vars.DebugOutput("New Game (Game timer reset), at "+playingTime.Current);
+		if (playingTime.Current < playingTime.Old && playingTime.Old >= 600) {
+			if (settings.ResetEnabled) {
+				vars.DebugOutput("New Game (Game timer reset from Pause Menu), at "+playingTime.Current);
 			}
 			return true;
 		}
 	}
 	// Timer on cutscene skip or end
 	//==============================
-	// intro_state is a variable only used in the intro mission, changing to
+	// intro_cutsceneState is a variable only used in the intro mission, changing to
 	// 1 when the cutscene is skipped. It gets set to other values during the
 	// intro cutscene. If the cutscene is watched in full, the value will change
 	// from 3 to 0.
 	// 
 	// In the commonly used decompiled main.scm, this should be the variable $5353.
 	// 
-	else if (intro_state.Changed && playingTime.Current > 2000) {
-		if (intro_state.Current == 1 || (intro_state.Current == 0 && intro_state.Old == 3)) {
+	else if (intro_cutsceneState.Changed && playingTime.Current > 2000) {
+		if (intro_cutsceneState.Current == 1 || (intro_cutsceneState.Current == 0 && intro_cutsceneState.Old == 3)) {
 			if (settings.StartEnabled) {
 				vars.DebugOutput("New Game (Intro cutscene over), at "+playingTime.Current);
 			}
@@ -3678,8 +3686,8 @@ start {
 
 reset {
 	var playingTime = vars.watchers["playingTime"];
-	var intro_newgamestarted = vars.watchers["intro_newgamestarted"];
-	var intro_state = vars.watchers["intro_state"];
+	var intro_cutsceneState = vars.watchers["intro_cutsceneState"];
+	var loading = vars.watchers["loading"];
 	/*
 	 * Previously the playingTime was used to reset the timer, although it seems like for
 	 * different people the game started at different playingTime values (probably depending
@@ -3695,31 +3703,59 @@ reset {
 	 * when e.g. starting a new game instead of loading a save even less a problem (because
 	 * you have enough time to ESC before the timer is reset).
 	 */
-
 	if (playingTime.Current > 240000) {
 		return false;
 	}
 
     if (settings["startOnLoadFinish"]) {
-		if (intro_newgamestarted.Changed && intro_newgamestarted.Old == 0) {
+		if (playingTime.Current == 300 && playingTime.Old == 0) {
+			// Main menu loaded
+			return false;
+		}
+		if ((playingTime.Current == 302 || playingTime.Current == 301) && playingTime.Old == 300) {
+			// Starting or loading game from main menu
+			return false;
+		}
+		if (playingTime.Current > playingTime.Old && playingTime.Old > 300) {
+			// Regular timer tick
+			return false;
+		}
+		if (playingTime.Current >= 600 && playingTime.Old == 300) {
 			if (settings.ResetEnabled) {
-				vars.DebugOutput("Reset (Mission Initial started)");
+				vars.DebugOutput("New Game (Game timer start from Main Menu), at "+playingTime.Current);
 			}
 			return true;
 		}
-		else if (playingTime.Current < 1000 && (playingTime.Old > 1000 || playingTime.Old == 0)) {
+		if (playingTime.Current < playingTime.Old && playingTime.Old >= 600) {
 			if (settings.ResetEnabled) {
-				vars.DebugOutput("Reset (Game timer reset)");
+				vars.DebugOutput("Reset (Game timer reset from Pause Menu)");
 			}
 			return true;
 		}
 	}
-	else if (intro_state.Changed && playingTime.Current > 2000) {
-		if (intro_state.Current == 1 || (intro_state.Current == 0 && intro_state.Old == 3)) {
-			if (settings.ResetEnabled) {
+	else if (intro_cutsceneState.Changed && playingTime.Current > 2000) {
+		if (intro_cutsceneState.Current == 1 || (intro_cutsceneState.Current == 0 && intro_cutsceneState.Old == 3)) {
+			if (settings.StartEnabled) {
 				vars.DebugOutput("Reset (Intro cutscene over)");
 			}
 			return true;
 		}
 	}
+
+	// if (settings["resetOnSaveLoad"]) {
+	// 	if (math.abs(loading.Current - loading.Old) > 2000) {
+
+	// 	}		
+	// }
+	
+	
+	//  && !loading.Current && loading.Old)
+	// {
+	// 	vars.lastLoad = Environment.TickCount;
+	// 	if (settings.StartEnabled)
+	// 	{
+	// 		vars.DebugOutput("Reset (Loaded Save)");
+	// 	}
+	// 	return true;
+	// }
 }
