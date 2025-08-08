@@ -150,6 +150,8 @@ startup {
 	settings.SetToolTip("Missions", "Missions with a visible-anywhere minimap marker until completion");
 	#region Los Santos
 	settings.Add("LS", true, "Los Santos", "Missions");
+	// In the Beginning is not technically part of the "intro chain", but 
+	// including it here anyway as it fits in narratively.
 	settings.Add("LS_Intro", true, "Intro", "LS");
 	#region In the Beginning
 	settings.Add("intro", false, "In the Beginning", "LS_Intro");
@@ -193,9 +195,10 @@ startup {
 	#region LS Intro Chain
 	// 1: Big Smoke / Sweet & Kendl
 	// 2: Ryder
-	vars.watchScmGlobalVariables.Add(448, "ls_intro_chain");
+	vars.watchScmGlobalVariables.Add(448, "ls_intro_chain"); // $INTRO_TOTAL_PASSED_MISSIONS
 
-	// Big Smoke / Sweet & Kendl
+	#region Big Smoke / Sweet & Kendl
+	// ==============================
 	settings.Add("bs", true, "Big Smoke", "LS_Intro");
 	settings.CurrentDefaultParent = "bs";
 	settings.Add("bs_start", false, "Mission Started");
@@ -268,8 +271,10 @@ startup {
 		return;
 	};
 	vars.CheckSplit.Add(func_bs);
-
-	// Ryder
+	
+	#endregion // Big Smoke / Sweet & Kendl
+	#region Ryder
+	// ==========
 	settings.Add("r", true, "Ryder", "LS_Intro");
 	settings.CurrentDefaultParent = "r";
 	settings.Add("r_start", false, "Mission Started");
@@ -354,7 +359,32 @@ startup {
 		return;
 	};
 	vars.CheckSplit.Add(func_r);
+	#endregion // Ryder
 	#endregion // LS Intro Chain
+	#region Sweet Chain
+	settings.Add("LS_Sweet", true, "Sweet", "LS");
+	// 1: Tagging up Turf
+	// 2: Cleaning the Hood
+	// 3: Drive-Thru
+	// 4: Nines and AKs
+	// 5: Drive-By
+	// 6: Sweet's Girl
+	// 7: Cesar Vialpando
+	// 8: Doberman
+	// 9: Los Sepulcros
+	vars.watchScmGlobalVariables.Add(452, "ls_sweet_chain"); // $SWEET_TOTAL_PASSED_MISSIONS
+
+	settings.Add("tut", true, "Tagging up Turf", "LS_Sweet");
+	settings.Add("cth", true, "Cleaning the Hood", "LS_Sweet");
+	settings.Add("dt", true, "Drive-Thru", "LS_Sweet");
+	settings.Add("9ak", true, "Nines and AKs", "LS_Sweet");
+	settings.Add("db", true, "Drive-By", "LS_Sweet");
+	settings.Add("sg", true, "Sweet's Girl", "LS_Sweet");
+	settings.Add("cv", true, "Cesar Vialpando", "LS_Sweet");
+	settings.Add("d", true, "Doberman", "LS_Sweet");
+	settings.Add("lossep", true, "Los Sepulcros", "LS_Sweet");
+
+	#endregion // Sweet Chain
 
 	settings.Add("LS_Sweet", true, "Sweet", "LS");
 	settings.Add("LS_Smoke", true, "Big Smoke", "LS");
@@ -971,21 +1001,7 @@ startup {
 	 * them.
 	 */
 	vars.missionChains = new Dictionary<int, Dictionary<int, string>> {
-		{448, new Dictionary<int, string> { // $INTRO_TOTAL_PASSED_MISSIONS
-			{1, "Big Smoke"},
-			{2, "Ryder"},
-		}},
-		{452, new Dictionary<int, string> { // $SWEET_TOTAL_PASSED_MISSIONS
-			{1, "Tagging up Turf"},
-			{2, "Cleaning the Hood"},
-			{3, "Drive-Thru"},
-			{4, "Nines and AKs"},
-			{5, "Drive-By"},
-			{6, "Sweet's Girl"},
-			{7, "Cesar Vialpando"},
-			{8, "Doberman"},
-			{9, "Los Sepulcros"}
-		}},
+
 		{453, new Dictionary<int, string> { // $RYDER_TOTAL_PASSED_MISSIONS
 			{1, "Home Invasion"},
 			{2, "Catalyst"},
@@ -1639,11 +1655,7 @@ startup {
 	//-----------
 	//-----------
 	//-----------
-	addMissionList("LS_Sweet", new List<string>() { 
-        "Tagging up Turf", "Cleaning the Hood", "Drive-Thru",
-		"Nines and AKs", "Drive-By", "Sweet's Girl", 
-        "Cesar Vialpando", "Doberman", //"Los Sepulcros"
-    });
+
 	addMissionList("LS_Smoke", new List<string>() { 
         "OG Loc", "Running Dog", "Wrong Side of the Tracks", "Just Business"
     });
