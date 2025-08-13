@@ -82,6 +82,14 @@ startup {
 	};
 	vars.DebugOutput = DebugOutput;
 
+	Action<string> DebugWatcherOutput = (name) => {
+		var dbgW = vars.watchers[name];
+		if (dbgW.Changed) {
+			vars.DebugOutput(name + ": " + dbgW.Old + " -> " + dbgW.Current);
+		}
+	};
+	vars.DebugWatcherOutput = DebugWatcherOutput;
+
 	#endregion
 
 	#region Address Keeping
@@ -156,7 +164,7 @@ startup {
 	#region In the Beginning
 	settings.Add("intro", false, "In the Beginning", "LS_Intro");
 	settings.CurrentDefaultParent = "intro";
-	settings.Add("intro_cutsceneEnd", false, "Cutscene skipped or finished", "intro");
+	settings.Add("intro_cutsceneEnd", false, "Intro cutscenes skipped or finished", "intro");
 	settings.Add("intro_passed", false, "Bicycle entered or abandoned", "intro");
 	settings.Add("intro_groveStreet", false, "\"Grove Street - Home\" line played", "intro");
 
@@ -211,7 +219,7 @@ startup {
 
 	vars.watchScmGlobalVariables.Add(65, "bs_houseHelp"); // $HELP_GROOVE_SHOWN
 	
-	vars.watchScmMissionLocalVariables.Add(46);
+	vars.watchScmMissionLocalVariables.Add(46); // bs_dialogueBlock
 
 	vars.significantThreads.Add("intro1","bs_start");
 	
@@ -293,7 +301,7 @@ startup {
 	vars.watchScmGlobalVariables.Add(676, "r_barberBought");
 	vars.watchScmGlobalVariables.Add(1514, "r_fail");
 
-	vars.watchScmMissionLocalVariables.Add(40);
+	vars.watchScmMissionLocalVariables.Add(40); // r_dialogueBlock
 
 	vars.significantThreads.Add("intro2","r_start");
 
@@ -302,8 +310,8 @@ startup {
 			return;
 		}
 		var ls_intro_chain = vars.watchers["ls_intro_chain"];
-		if (ls_intro_chain.Current == 2) {
-			if (ls_intro_chain.Changed) {
+		if (ls_intro_chain.Current >= 2) {
+			if (ls_intro_chain.Changed && ls_intro_chain.Old == 0) {
 				return "r_pass";
 			}
 			return;
@@ -374,8 +382,191 @@ startup {
 	// 9: Los Sepulcros
 	vars.watchScmGlobalVariables.Add(452, "ls_sweet_chain"); // $SWEET_TOTAL_PASSED_MISSIONS
 
+	#region Tagging up Turf
+	// ====================
 	settings.Add("tut", true, "Tagging up Turf", "LS_Sweet");
+	settings.SetToolTip("tut", "Specific tags involved are 39, 38, 37, 63, 64 & 62");
+	settings.CurrentDefaultParent = "tut";
+	settings.Add("tut_start", false, "Mission Started");
+	settings.Add("tut_introCutsceneEnd", false, "Intro cinematic end");
+	settings.Add("tut_cutsceneSweetSprayTagEnd", false, "Cutscene of Sweet spraying first tag ended");
+	settings.Add("tut_carEnterAfterTag3", false, "Entering the car after spraying first group of tags");
+	settings.Add("tut_carExitBeforeTag4", false, "Exiting the car before spraying second group of tags");
+	settings.Add("tut_approachingGangMembers", false, "Approaching tag with gang members");
+	settings.Add("tut_carEnterAfterTag6", false, "Entering the car after spraying second group of tags");
+	settings.Add("tut_finalCutsceneStart", false, "Ending cutscene start");
+	settings.Add("tut_pass", true, "Mission Passed");
+
+	vars.watchScmMissionLocalVariables.Add(40);	// tut_carEnterAfterTag6
+	vars.watchScmMissionLocalVariables.Add(46); // tut_approachingGangMembers
+	vars.watchScmMissionLocalVariables.Add(48); // tut_dialogueBlock
+	vars.watchScmMissionLocalVariables.Add(58); // tut_subPhase
+	vars.watchScmMissionLocalVariables.Add(65); // tut_cutsceneSweetSprayTagEnd
+
+	vars.significantThreads.Add("sweet1","tut_start");
+
+	Func<string> func_tut = () => {
+		if (vars.lastStartedMission != "sweet1") {
+			return;
+		}
+		var ls_sweet_chain = vars.watchers["ls_sweet_chain"];
+		if (ls_sweet_chain.Current >= 1) {
+			if (ls_sweet_chain.Changed && ls_sweet_chain.Old == 0) {
+				return "tut_pass";
+			}
+			return;
+		}
+
+		// Dialogue block:
+		// 4 - Hey, wait up!
+		// 6 - Like riding a bike ain't it boy
+		var tut_dialogueBlock = vars.watchers["48@"];
+		if (tut_dialogueBlock.Changed) {
+			if (tut_dialogueBlock.Old == 0 && tut_dialogueBlock.Current == 4) {
+				return "tut_introCutsceneEnd";
+			}
+			if (tut_dialogueBlock.Old == 4 && tut_dialogueBlock.Current == 6) {
+				// $6548 also covers this (changes from 0 to 1)
+				return "tut_finalCutsceneStart";
+			}
+		}
+		
+		if (tut_dialogueBlock.Current == 0) {
+			// Failsafe for mission restart
+			return;
+		}
+		
+		// Something also related to help boxes or something. Gets set to 1 when the cutscene ends, and to 2 shortly after.
+		var tut_cutsceneSweetSprayTagEnd = vars.watchers["65@"];
+		if (tut_cutsceneSweetSprayTagEnd.Changed && tut_cutsceneSweetSprayTagEnd.Old == 0 && tut_cutsceneSweetSprayTagEnd.Current == 1) {
+			return "tut_cutsceneSweetSprayTagEnd";
+		}
+
+		// Sub phase:
+		// Appears to be related to the help boxes/objectives notifications.
+		// It gets set to 1 when the "hold LMB to spray" box displays, and 2 for the subsequent box
+		// Upon entering Sweets car after spraying first 3 tags, it gets reset to 0
+		// On the drive, it gets set to 1.
+		// It gets set to 0 when leaving the car, then set back to 1 shortly after.
+		var tut_subPhase = vars.watchers["58@"];
+		if (tut_subPhase.Changed) {
+			if (tut_subPhase.Old == 2 && tut_subPhase.Current == 0) {
+				return "tut_carEnterAfterTag3";
+			}
+			else if (tut_subPhase.Old == 1 && tut_subPhase.Current == 0) {
+				return "tut_carExitBeforeTag4";
+			}
+		}
+
+		// A variable keeping track of which lines are to be said by the gang members. 
+		// Set to 1 when the approach cutscene ended, or when it should have played if killing the gang members
+		// Set to 2 and then 3 as lines are spoken, or to 4 if gang members are dead
+		var tut_approachingGangMembers = vars.watchers["46@"];
+		if (tut_approachingGangMembers.Changed && tut_approachingGangMembers.Old == 0 && tut_approachingGangMembers.Current == 1) {
+			return "tut_approachingGangMembers";
+		}
+
+		// "Get us back to the hood, CJ" line played
+		var tut_carEnterAfterTag6 = vars.watchers["40@"];
+		if (tut_carEnterAfterTag6.Changed && tut_carEnterAfterTag6.Old == 0 && tut_carEnterAfterTag6.Current == 1) {
+			return "tut_carEnterAfterTag6";
+		}
+
+		return;
+	};
+	vars.CheckSplit.Add(func_tut);
+
+	#endregion // Tagging up Turf
+	#region Cleaning the Hood
 	settings.Add("cth", true, "Cleaning the Hood", "LS_Sweet");
+	settings.CurrentDefaultParent = "cth";
+	settings.Add("cth_start", false, "Mission Started");
+	settings.Add("cth_cutsceneSkipped", false, "Intro cinematic end");
+	settings.Add("cth_bDupVisited", false, "After visiting B Dup");
+	settings.Add("cth_dealerApproached", false, "Approaching and talking to the dealer");
+	settings.Add("cth_dealerKilled", false, "Cutscene start after killing dealer");
+	settings.Add("cth_crackDenArrive", false, "Arrival in front of the crack Den");
+	settings.Add("cth_crackDenCleared", false, "Crack den occupants killed");
+	settings.Add("cth_finalCutscene", false, "Arrival back at Grove Street");
+	settings.Add("cth_pass", true, "Mission Passed");
+
+	vars.watchScmMissionLocalVariables.Add(43);	// cth_crackDenCleared
+	vars.watchScmMissionLocalVariables.Add(87);	// cth_dialogueBlock
+	vars.watchScmMissionLocalVariables.Add(91); // cth_dialogue
+	vars.watchScmMissionLocalVariables.Add(102); // cth_act
+
+	vars.significantThreads.Add("sweet1b","cth_start");
+
+	Func<string> func_cth = () => {
+		if (vars.lastStartedMission != "sweet1b") {
+			return;
+		}
+		var ls_sweet_chain = vars.watchers["ls_sweet_chain"];
+		if (ls_sweet_chain.Current >= 2) {
+			if (ls_sweet_chain.Changed && ls_sweet_chain.Old == 1) {
+				return "cth_pass";
+			}
+			return;
+		}
+
+		// Act:
+		// 0 - Start
+		// 1 - After visiting B Dup
+		// 2 - After dealer dead cutscene
+		// 3 - Getting out of the car in front of the house
+		// 4 - Indoor combat done
+		var cth_act = vars.watchers["102@"];
+		if (cth_act.Changed) {
+			if (cth_act.Current == 1) {
+				return "cth_bDupVisited";
+			}
+			else if (cth_act.Current == 3) {
+				return "cth_crackDenArrive";
+			}
+		}
+
+		// Dialogue block:
+		// 0 - Hey, B Dup is only a couple blocks (7)
+		// 1 - Man, I know this cat (6)
+		// 2 - <unused>
+		// 3 - Now Ballas know Grove Street Families on their way back up (5)
+		// 4 - Hey Partner, Im working man (1)
+		// 5 - Man, we on a serious mission now (1)
+		// 6 - Oooeee you can smell a crack den (1)
+		// 7 - Now that the base ain't getting pushed up (3)
+		var cth_dialogueBlock = vars.watchers["87@"];
+		if (cth_dialogueBlock.Changed) {
+			if (cth_dialogueBlock.Current == 4) {
+				return "cth_dealerApproached";
+			}
+			else if (cth_dialogueBlock.Current == 1) {
+				return "cth_dealerKilled";
+			}
+			else if (cth_dialogueBlock.Current == 7) {
+				return "cth_finalCutscene";
+			}
+		}
+		
+		// When a dialogue block is selected, another variable (91@) is set as well. Unsure what it does.
+		// Values are listed in the table above in parentheses.
+		var cth_dialogue = vars.watchers["91@"];
+		if (cth_dialogue.Changed) {
+			if (cth_dialogue.Current == 7) {
+				return "cth_cutsceneSkipped";
+			}
+		}
+
+		// Upon killing all 3 Ballas guys
+		var cth_crackDenCleared = vars.watchers["43@"];
+		if (cth_crackDenCleared.Changed && cth_crackDenCleared.Old == 0 && cth_crackDenCleared.Current == 1) {
+			return "cth_crackDenCleared";
+		}
+		return;
+	};
+	vars.CheckSplit.Add(func_cth);
+
+	#endregion // Cleaning the Hood
+
 	settings.Add("dt", true, "Drive-Thru", "LS_Sweet");
 	settings.Add("9ak", true, "Nines and AKs", "LS_Sweet");
 	settings.Add("db", true, "Drive-By", "LS_Sweet");
@@ -386,7 +577,6 @@ startup {
 
 	#endregion // Sweet Chain
 
-	settings.Add("LS_Sweet", true, "Sweet", "LS");
 	settings.Add("LS_Smoke", true, "Big Smoke", "LS");
 	settings.Add("LS_Ogloc", true, "OG Loc", "LS");
 	settings.Add("LS_Ryder", true, "Ryder", "LS");
@@ -440,7 +630,7 @@ startup {
 	settings.Add("VehicleSubmissions", true, "Vehicle Submissions", "SideMissions");
 	#region Firefighter
 	settings.Add("firefighter", true, "Firefighter", "VehicleSubmissions");
-	settings.Add("firefighter_start", false, "Mission Started", "firefighter");
+	settings.Add("firefighter_start", false, "Mission Started for the first time", "firefighter");
 	settings.Add("firefighter_level", false, "Levels", "firefighter");
 	settings.CurrentDefaultParent = "firefighter_level";
 	for (int i = 1; i <= 12; i++) {
@@ -985,21 +1175,7 @@ startup {
 
 	#region mission lists
 
-	// Missions
-	//=========
-	/*
-	 * Global Variables of missions ($xxxx format). Conversion to memory addresses is done automatically.
-	 * 
-	 * Formula for global variable ($x) to address y (in decimal):
-	 * y = 6592864 + (x * 4)
-	 * 0d6592864 = 0x649960
-	 * 
-	 * Commenting out missions may interfere with custom splits that
-	 * refer to their status (MissionPassed-function).
-	 *
-	 * Mission names defined here also act as setting IDs, so don't change
-	 * them.
-	 */
+	return;
 	vars.missionChains = new Dictionary<int, Dictionary<int, string>> {
 
 		{453, new Dictionary<int, string> { // $RYDER_TOTAL_PASSED_MISSIONS
