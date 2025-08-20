@@ -231,7 +231,7 @@ startup {
 
 					vars.watchScmGlobalVariables.Add(65, "bs_houseHelp"); // $HELP_GROOVE_SHOWN
 					
-					vars.watchScmMissionLocalVariables.Add(46); // bs_dialogueBlock
+					vars.watchScmMissionLocalVariables.Add(46);
 
 					vars.significantThreads.Add("intro1","bs_start");
 					
@@ -313,7 +313,7 @@ startup {
 					vars.watchScmGlobalVariables.Add(676, "r_barberBought");
 					vars.watchScmGlobalVariables.Add(1514, "r_fail");
 
-					vars.watchScmMissionLocalVariables.Add(40); // r_dialogueBlock
+					vars.watchScmMissionLocalVariables.Add(40);
 
 					vars.significantThreads.Add("intro2","r_start");
 
@@ -403,11 +403,11 @@ startup {
 					settings.Add("tut_finalCutsceneStart", false, "Ending cutscene start");
 					settings.Add("tut_pass", true, "Mission Passed");
 
-					vars.watchScmMissionLocalVariables.Add(40);	// tut_carEnterAfterTag6
-					vars.watchScmMissionLocalVariables.Add(46); // tut_approachingGangMembers
-					vars.watchScmMissionLocalVariables.Add(48); // tut_dialogueBlock
-					vars.watchScmMissionLocalVariables.Add(58); // tut_subPhase
-					vars.watchScmMissionLocalVariables.Add(65); // tut_cutsceneSweetSprayTagEnd
+					vars.watchScmMissionLocalVariables.Add(40);	
+					vars.watchScmMissionLocalVariables.Add(46); 
+					vars.watchScmMissionLocalVariables.Add(48); 
+					vars.watchScmMissionLocalVariables.Add(58); 
+					vars.watchScmMissionLocalVariables.Add(65); 
 
 					vars.significantThreads.Add("sweet1","tut_start");
 
@@ -490,10 +490,10 @@ startup {
 					settings.Add("cth_finalCutscene", false, "Arrival back at Grove Street");
 					settings.Add("cth_pass", true, "Mission Passed");
 
-					vars.watchScmMissionLocalVariables.Add(43);	// cth_crackDenCleared
-					vars.watchScmMissionLocalVariables.Add(87);	// cth_dialogueBlock
-					vars.watchScmMissionLocalVariables.Add(91); // cth_dialogueLength
-					vars.watchScmMissionLocalVariables.Add(102); // cth_stage
+					vars.watchScmMissionLocalVariables.Add(43);	
+					vars.watchScmMissionLocalVariables.Add(87);	
+					vars.watchScmMissionLocalVariables.Add(91); 
+					vars.watchScmMissionLocalVariables.Add(102);
 
 					vars.significantThreads.Add("sweet1b","cth_start");
 
@@ -571,7 +571,7 @@ startup {
 					settings.Add("dt_pass", true, "Mission Passed");
 					settings.SetToolTip("dt_introEnded", "Splits after \"Smoke looks like he's gonna pass out\" line.");
 
-					vars.watchScmMissionLocalVariables.Add(79);	// dt_dialogueBlock
+					vars.watchScmMissionLocalVariables.Add(79);
 
 					vars.significantThreads.Add("sweet3","dt_start");
 					
@@ -639,13 +639,12 @@ startup {
 					settings.Add("naak_shopExit", false, "Clothing store exit");
 					settings.Add("naak_pass", true, "Mission Passed");
 
-					vars.watchScmMissionLocalVariables.Add(39);	// naak_dialogueBlock
-					vars.watchScmMissionLocalVariables.Add(48);	// naak_dialogueLength
-
-					vars.watchScmMissionLocalVariables.Add(36); // naak_bottlesShot
-					vars.watchScmMissionLocalVariables.Add(62); // naak_combatActive
-					vars.watchScmMissionLocalVariables.Add(64); // naak_smokeActions
-					vars.watchScmMissionLocalVariables.Add(86); // naak_interior
+					vars.watchScmMissionLocalVariables.Add(39);	
+					vars.watchScmMissionLocalVariables.Add(48);	
+					vars.watchScmMissionLocalVariables.Add(36); 
+					vars.watchScmMissionLocalVariables.Add(62); 
+					vars.watchScmMissionLocalVariables.Add(64); 
+					vars.watchScmMissionLocalVariables.Add(86); 
 
 					vars.significantThreads.Add("sweet2","naak_start");
 
@@ -826,7 +825,7 @@ startup {
 					settings.Add("sg_chaseEnd", false, "Arrival at Sweet's house");
 					settings.Add("sg_pass", true, "Mission Passed");
 
-					vars.watchScmMissionLocalVariables.Add(127); // sg_stage;
+					vars.watchScmMissionLocalVariables.Add(127);
 
 					vars.significantThreads.Add("hoods5","sg_start");
 
@@ -889,8 +888,8 @@ startup {
 					settings.Add("cv_endCinematicStart", false, "Start of final cinematic");
 					settings.Add("cv_pass", true, "Mission Passed");
 
-					vars.watchScmMissionLocalVariables.Add(34); // sg_stage;
-					vars.watchScmMissionLocalVariables.Add(35); // sg_subStage;
+					vars.watchScmMissionLocalVariables.Add(34); 
+					vars.watchScmMissionLocalVariables.Add(35); 
 					
 					vars.significantThreads.Add("sweet6", "cv_start");
 
@@ -1043,8 +1042,8 @@ startup {
 					settings.Add("ogl_atBurgerShot", false, "Arrival at Burger Shot");
 					settings.Add("ogl_pass", true, "Mission Passed");
 
-					vars.watchScmMissionLocalVariables.Add(67);	// ogl_stage
-					vars.watchScmMissionLocalVariables.Add(68);	// ogl_subStage
+					vars.watchScmMissionLocalVariables.Add(67);	
+					vars.watchScmMissionLocalVariables.Add(68);	
 
 					vars.significantThreads.Add("twar7","ogl_start");
 
@@ -1130,9 +1129,9 @@ startup {
 					settings.Add("rd_chaseStart", false, "End of mid mission cinematic");
 					settings.Add("rd_pass", true, "Mission Passed");
 
-					vars.watchScmMissionLocalVariables.Add(162);	// rd_car
-					vars.watchScmMissionLocalVariables.Add(166);	// rd_arrive
-					vars.watchScmMissionLocalVariables.Add(181);	// rd_chaseStart
+					vars.watchScmMissionLocalVariables.Add(162);	
+					vars.watchScmMissionLocalVariables.Add(166);	
+					vars.watchScmMissionLocalVariables.Add(181);	
 
 					vars.significantThreads.Add("smoke2","rd_start");
 
@@ -1179,8 +1178,8 @@ startup {
 						settings.Add("lab_vanEntered", false, "Van entered");
 						settings.Add("lab_pass", true, "Mission Passed");
 
-						vars.watchScmMissionLocalVariables.Add(207);	// lab_vanEntered
-						vars.watchScmMissionLocalVariables.Add(279);	// lab_partyObserved
+						vars.watchScmMissionLocalVariables.Add(207);	
+						vars.watchScmMissionLocalVariables.Add(279);	
 						
 						vars.significantThreads.Add("music1","lab_start");
 
@@ -1219,9 +1218,9 @@ startup {
 						settings.Add("mdr_endCut", false, "Return to Burger Shot");
 						settings.Add("mdr_pass", true, "Mission Passed");
 
-						vars.watchScmMissionLocalVariables.Add(70);	//mdr_stage
-						vars.watchScmMissionLocalVariables.Add(71);	//mdr_room
-						vars.watchScmMissionLocalVariables.Add(73);	//mdr_alcoveArea
+						vars.watchScmMissionLocalVariables.Add(70);	
+						vars.watchScmMissionLocalVariables.Add(71);	
+						vars.watchScmMissionLocalVariables.Add(73);	
 
 						vars.significantThreads.Add("music2","mdr_start");
 
@@ -1291,9 +1290,9 @@ startup {
 						settings.Add("mi_carDunk", false, "Car dunked");
 						settings.Add("mi_pass", true, "Mission Passed");
 
-						vars.watchScmMissionLocalVariables.Add(174);	// mi_dialogueBlock
-						vars.watchScmMissionLocalVariables.Add(122);	// mi_stage
-						vars.watchScmMissionLocalVariables.Add(160);	// mi_convoyApproach
+						vars.watchScmMissionLocalVariables.Add(174);
+						vars.watchScmMissionLocalVariables.Add(122);
+						vars.watchScmMissionLocalVariables.Add(160);
 
 						vars.significantThreads.Add("music3", "mi_start");
 
@@ -1358,11 +1357,186 @@ startup {
 						};
 						vars.CheckSplit.Add(func_mi);
 					#endregion
+					#region House Party
+						settings.Add("hp1", true, "House Party (Cutscene)", "LS_Ogloc");
+						settings.CurrentDefaultParent = "hp1";
+						settings.Add("hp1_start", false, "Mission Started");
+						settings.Add("hp1_pass", true, "Mission Passed");
+						settings.Add("hp2", true, "House Party", "LS_Ogloc");
+						settings.CurrentDefaultParent = "hp2";
+						settings.Add("hp2_start", false, "Mission Started");
+						settings.Add("hp2_cutsceneEnd", false, "Cutscenes ended");
+						settings.Add("hp2_blockadeDead", false, "First two cars cleared");
+						settings.Add("hp2_bridgeDead", false, "Bridge cleared");
+						settings.Add("hp2_fightOver", false, "Last big fight cleared");
+						settings.Add("hp2_pass", true, "Mission Passed");
 
+						vars.significantThreads.Add("music5", "");
+
+						vars.watchScmMissionLocalVariables.Add(80);	// music5_goals
+					
+						Func<string> func_hp = () => {
+							var thread = vars.watchers["thread"];
+							var mission_chain = vars.watchers["ls_ogloc_chain"];
+							if (thread.Changed) {
+								if (thread.Current == "music5") {
+									return mission_chain.Current == 3 ? "hp1_start" : "hp2_start";
+								}
+							}
+
+							if (vars.lastStartedMission != "music5") {
+								return;
+							}
+							if (mission_chain.Changed) {
+								if (mission_chain.Current >= 3) {
+									if (mission_chain.Old == 3) {
+										vars.TrySplit("hp1_pass");
+									}
+									else if (mission_chain.Old == 4) {
+										vars.TrySplit("hp2_pass");
+									}
+								}
+							}
+							
+							// 1: Car blockade
+							// 2: Enemies on bridge
+							// 3: Big fight all round
+							// 4: Fight over, wait for cutscene
+							var hp_stage = vars.watchers["80@"];
+							if (hp_stage.Changed) {
+								switch((int)hp_stage.Current) {
+									case 1:
+										return "hp2_cutsceneEnd";
+										break;
+									case 2:
+										return "hp2_blockadeDead";
+										break;
+									case 3:
+										return "hp2_bridgeDead";
+										break;
+									case 4:
+										return "hp2_fightOver";
+										break;
+								}
+							}
+							return;
+						};
+						vars.CheckSplit.Add(func_hp);
+					#endregion
+				#endregion
+				#region CRASH Chain
+					settings.Add("LS_Crash", true, "C.R.A.S.H.", "LS");
+					// 1: Burning Desire
+					// 2: Gray Imports
+					#region Burning Desire
+						vars.watchScmGlobalVariables.Add(456, "ls_crash_chain");	// $CRASH_LS_TOTAL_PASSED_MISSIONS
+						settings.Add("bd", true, "Burning Desire", "LS_Crash");
+						settings.CurrentDefaultParent = "bd";
+						settings.Add("bd_start", false, "Mission Started");
+						settings.Add("bd_cutEnd", false, "Initial cinematic ended");
+						settings.Add("bd_molotovPicked", false, "Molotovs picked up");
+						settings.Add("bd_houseApproach", false, "Getting within 300 meters of the house");
+						settings.Add("bd_houseArrive", false, "Arrival at the house");
+						settings.Add("bd_window1", false, "1 window torched");
+						settings.Add("bd_window2", false, "2 windows torched");
+						settings.Add("bd_window3", false, "3 windows torched");
+						settings.Add("bd_window4", false, "4 windows torched");
+						settings.Add("bd_window5", false, "5 windows torched");
+						settings.Add("bd_windowsTorched", false, "All windows torched");
+						settings.Add("bd_houseEnter", false, "House entered");
+						settings.Add("bd_fireExtinguisherPick", false, "Fire extinguisher picked up");
+						settings.Add("bd_deniseReach", false, "Arrived in front of Denise's room");
+						settings.Add("bd_deniseCutStart", false, "Entered Denise's room");
+						settings.Add("bd_deniseCutEnd", false, "Escape sequence started");
+						settings.Add("bd_houseLeft", false, "House left with Denise");
+						settings.Add("bd_deniseHouseReach", false, "Arrival at Denise's place");
+						settings.Add("bd_deniseWave", false, "Denise waves the player goodbye");
+						settings.Add("bd_pass", true, "Mission Passed");
+
+						vars.significantThreads.Add("crash1", "bd_start");
+
+						vars.watchScmMissionLocalVariables.Add(34);		// m_stage
+						vars.watchScmMissionLocalVariables.Add(35);		// m_goals
+						vars.watchScmMissionLocalVariables.Add(209);	// countTargetRoomsHit
+
+						Func<string> func_bd = () => {
+							if (!vars.ValidateMissionProgress("crash1", "ls_crash_chain", 0, 1, "bd_pass")) {
+								return;
+							}
+							// stage.goal:
+							// 1.1 after intro cut, go pick up molotovs
+							// 1.4 molotovs grabbed and next objective shown
+							// 1.5 place guys at house and animate them
+							// 2.2 arrived at house, show torch objective
+							// 3.1 all windows torched
+							// 4.2 house entered
+							// 4.12 coochie approached
+							// 5 denise reached cutscene
+							// 6 denise cutscene end
+							// 7 house left
+							// 7.4 arrived at denise's house
+							// 7.11 denise waves player goodbye
+							var bd_stage = vars.watchers["34@"];
+							if (bd_stage.Current == 2 || bd_stage.Old == 2) {
+								var bd_windowsTorched = vars.watchers["209@"];
+								if (bd_windowsTorched.Changed) {
+									vars.TrySplit("bd_window"+bd_windowsTorched.Current);
+								}
+							}
+							if (bd_stage.Changed) {
+								switch ((int)bd_stage.Current) {
+									case 1:
+										return "bd_cutEnd";
+										break;
+									case 2:
+										return "bd_houseArrive";
+										break;
+									case 3:
+										return "bd_windowsTorched";
+										break;
+									case 4:
+										return "bd_houseEnter";
+										break;
+									case 5:
+										return "bd_deniseCutStart";
+										break;
+									case 6:
+										return "bd_deniseCutEnd";
+										break;
+									case 7:
+										return "bd_houseLeft";
+										break;
+								}
+							}
+							var bd_goals = vars.watchers["35@"];
+							if (bd_goals.Changed) {
+								if (bd_stage.Current == 1) {
+									if (bd_goals.Current == 4) {
+										return "bd_molotovPicked";
+									}
+									else if (bd_goals.Current == 5) {
+										return "bd_houseApproach";
+									}
+								}
+								else if (bd_stage.Current == 4 && bd_goals.Current == 12) {
+									return "bd_deniseReach";
+								}
+								else if (bd_stage.Current == 7) {
+									if (bd_goals.Current == 4) {
+										return "bd_deniseHouseReach";
+									}
+									if (bd_goals.Current == 11) {
+										return "bd_deniseWave";
+									}
+								}
+							}
+							return;
+						};
+						vars.CheckSplit.Add(func_bd);
+					#endregion
 				#endregion
 
 				settings.Add("LS_Ryder", true, "Ryder", "LS");
-				settings.Add("LS_Crash", true, "C.R.A.S.H.", "LS");
 
 				#region Cesar Chain
 					settings.Add("LS_Cesar", true, "Cesar", "LS");
@@ -1381,7 +1555,7 @@ startup {
 
 					vars.watchScmGlobalVariables.Add(2336, "hslr_raceStart");
 
-					vars.watchScmMissionLocalVariables.Add(34);	// hslr_cutEnd
+					vars.watchScmMissionLocalVariables.Add(34);
 
 					Func<string> func_hslr = () => {
 						var ls_cesar_chain = vars.watchers["ls_cesar_chain"];
@@ -1479,11 +1653,11 @@ startup {
 				vars.watchScmGlobalVariables.Add(1994, "courier2_pass");	// $MISSION_COURIER_SF_PASSED
 				vars.watchScmGlobalVariables.Add(189, "courier_active");	// $ONMISSION_COURIER
 
-				vars.watchScmMissionLocalVariables.Add(757);	// courier_checkpoints
-				vars.watchScmMissionLocalVariables.Add(760);	// courier2_level
-				vars.watchScmMissionLocalVariables.Add(761);	// courier1_level
-				vars.watchScmMissionLocalVariables.Add(762);	// courier3_level
-				vars.watchScmMissionLocalVariables.Add(872);	// courier_city
+				vars.watchScmMissionLocalVariables.Add(757);
+				vars.watchScmMissionLocalVariables.Add(760);
+				vars.watchScmMissionLocalVariables.Add(761);
+				vars.watchScmMissionLocalVariables.Add(762);
+				vars.watchScmMissionLocalVariables.Add(872);
 				
 				vars.significantThreads.Add("bcour","");
 
@@ -1684,11 +1858,11 @@ startup {
 					vars.watchScmGlobalVariables.Add(2300+i, "race"+i);
 				}
 
-				vars.watchScmMissionLocalVariables.Add(257);	// race_checkpoint (Air races)
-				vars.watchScmMissionLocalVariables.Add(260);	// race_checkpoint (Badlands A & B)
-				vars.watchScmMissionLocalVariables.Add(262);	// race_checkpoint (Common races)
-				vars.watchScmMissionLocalVariables.Add(268);	// race_checkpoint (Stadium races)
-				vars.watchScmMissionLocalVariables.Add(284);	// race_lap (Stadium races)
+				vars.watchScmMissionLocalVariables.Add(257);
+				vars.watchScmMissionLocalVariables.Add(260);
+				vars.watchScmMissionLocalVariables.Add(262);
+				vars.watchScmMissionLocalVariables.Add(268);
+				vars.watchScmMissionLocalVariables.Add(284);
 
 				vars.significantThreads.Add("cprace","");	// Race Tournament / 8 Track / Dirt Track
 				
@@ -2326,10 +2500,6 @@ startup {
 					{2, "Catalyst"},
 					{3, "Robbing Uncle Sam"}
 				}},
-				{456, new Dictionary<int, string> { // $CRASH_LS_TOTAL_PASSED_MISSIONS
-					{1, "Burning Desire"},
-					{2, "Gray Imports"}
-				}},
 				{458, new Dictionary<int, string> { // $LS_FINAL_TOTAL_PASSED_MISSIONS
 					{1, "Reuniting the Families"},
 					{2, "The Green Sabre"}
@@ -2885,19 +3055,8 @@ startup {
 		//-----------
 		//-----------
 
-		addMissionList("LS_Smoke", new List<string>() { 
-			"OG Loc", "Running Dog", "Wrong Side of the Tracks", "Just Business"
-		});
-		addMissionList("LS_Ogloc", new List<string>() { 
-			"Life's a Beach", "Madd Dogg's Rhymes",	"Management Issues", 
-			"House Party (Cutscene)", "House Party" 
-		});
 		addMissionList("LS_Ryder", new List<string>() { "Home Invasion", "Catalyst", "Robbing Uncle Sam" });
 		addMissionList("LS_Final", new List<string>() { "Reuniting the Families"});
-		addMissionList("LS_Crash", new List<string>() { "Burning Desire", "Gray Imports"});
-
-
-
 
 
 		// Los Sepulcros
