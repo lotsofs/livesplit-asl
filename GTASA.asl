@@ -81,32 +81,22 @@ startup {
 		vars.DebugOutput = DebugOutput;
 
 		Action<string> DebugWatcherOutput = (name) => {
-			var dbgW = vars.watchers[name];
+			var dbgW = vars.GetWatcher(name);
 			if (dbgW.Changed) {
 				vars.DebugOutput(name + ": " + dbgW.Old + " -> " + dbgW.Current);
 			}
 		};
 		vars.DebugWatcherOutput = DebugWatcherOutput;
 
-		// Function that's done when checking subsplits for each mission
-		// Checks if the mission is or was recently active
-		// Then checks if the mission has been passed, and splits if so
-		// If the mission is both active and not passed, returns true
-		Func<string, string, int, int, string, bool> ValidateMissionProgress = (thread, chain, currentIndex, passIndex, split) => {
-			if (vars.lastStartedMission != thread) {
-				return false;
+		Func<string, MemoryWatcher> GetWatcher = (name) => {
+			var w = vars.watcherList[name];
+			if (vars.currentWatchers.Contains(name)) {
+				return w;
 			}
-			var mission_chain = vars.watchers[chain];
-			if (mission_chain.Current >= passIndex) {
-				if (mission_chain.Changed && mission_chain.Old == currentIndex) {
-					vars.TrySplit(split);
-					return false;
-				}
-				return false;
-			}
-			return true;
+			w.Update(vars.game);
+			return w;
 		};
-		vars.ValidateMissionProgress = ValidateMissionProgress;
+		vars.GetWatcher = GetWatcher;
 	#endregion
 	#region Address Keeping
 		// Global SCM variables ($xxxx) to watch in memory
@@ -165,6 +155,8 @@ startup {
 	vars.CheckSplit = new List<Func<string>>();
 
 	#region Settings & Split Checking
+		settings.Add("Splits", true, "Splits");
+		settings.CurrentDefaultParent = "Splits";
 		// Settings as well as the splitting logic is all kept together in one place
 		// so it can be updated without having to scroll between two different sections
 		// in startup and init.
@@ -198,8 +190,8 @@ startup {
 						vars.watchScmGlobalVariables.Add(1510, "intro_newGameStarted");
 
 						Func<string> func_intro = () => {
-							var intro_cutsceneState = vars.watchers["intro_cutsceneState"];
-							var playingTime = vars.watchers["playingTime"];
+							var intro_cutsceneState = vars.GetWatcher("intro_cutsceneState");
+							var playingTime = vars.GetWatcher("playingTime");
 							if (intro_cutsceneState.Changed && playingTime.Current > 2000) {
 								if (intro_cutsceneState.Current == 1 || (intro_cutsceneState.Current == 0 && intro_cutsceneState.Old == 3)) {
 									return "intro_cutsceneEnd";
@@ -208,11 +200,11 @@ startup {
 							// intro_passed gets set when the player enters the bike, moves the bike,
 							// or leaves the starting area. In other words: Anything that makes the
 							// blue arrow over the bicycle disappear.
-							var intro_passed = vars.watchers["intro_passed"];
+							var intro_passed = vars.GetWatcher("intro_passed");
 							if (intro_passed.Changed && intro_passed.Current == 1) {
 								return "intro_passed";
 							}
-							var intro_groveStreet = vars.watchers["intro_groveStreet"];
+							var intro_groveStreet = vars.GetWatcher("intro_groveStreet");
 							if (intro_groveStreet.Changed && intro_groveStreet.Current == 1) {
 								return "intro_groveStreet";
 							}
@@ -246,7 +238,7 @@ startup {
 							if (vars.lastStartedMission == "intro2") {
 								return;
 							}
-							var ls_intro_chain = vars.watchers["ls_intro_chain"];
+							var ls_intro_chain = vars.GetWatcher("ls_intro_chain");
 							if (ls_intro_chain.Current == 2) {
 								return;
 							}
@@ -259,8 +251,8 @@ startup {
 								// 1: "Go inside the house" shown
 								// 2: after "To save the game..."
 								// 3: after "Go and see Ryder"
-								var bs_houseHelp = vars.watchers["bs_houseHelp"];
-								var interior = vars.watchers["interior"];
+								var bs_houseHelp = vars.GetWatcher("bs_houseHelp");
+								var interior = vars.GetWatcher("interior");
 								if (interior.Changed) {
 									if ((bs_houseHelp.Current == 1 || bs_houseHelp.Current == 0) && interior.Current == 3) {
 										return "bs_houseEnter";
@@ -283,7 +275,7 @@ startup {
 							// 4: Takes you back some huh CJ? Yeah
 							// 5: Straight back into the game right dog?
 							// 6: You're just a liability CJ
-							var bs_dialogueBlock = vars.watchers["46@"];
+							var bs_dialogueBlock = vars.GetWatcher("46@");
 							if (bs_dialogueBlock.Changed) {
 								if (bs_dialogueBlock.Current == 3 && bs_dialogueBlock.Old == 4) {
 									return "bs_parkingLotStart";
@@ -327,27 +319,27 @@ startup {
 						vars.missionNames.Add("Ryder","r_marker");
 
 						Func<string> func_r = () => {
-							if (!vars.ValidateMissionProgress("intro2", "ls_intro_chain", 1, 2, "r_pass")) {
+							if (!vars.ValidateMissionProgress("intro2", "ls_intro_chain", 1, 2, "r_pass", "r")) {
 								return;
 							}
 
-							var r_fail = vars.watchers["r_fail"];
+							var r_fail = vars.GetWatcher("r_fail");
 							if (r_fail.Changed && r_fail.Current == 1) {
 								return "r_fail";
 							}
-							var thread = vars.watchers["thread"];
-							var r_onMission = vars.watchers["r_onMission"];
+							var thread = vars.GetWatcher("thread");
+							var r_onMission = vars.GetWatcher("r_onMission");
 							if (thread.Changed && thread.Current == "intro2" && r_fail.Current == 1 && r_onMission.Current == 0) {
 								return "r_restart";
 							}
 							if (r_onMission.Current == 0) {
 								return;
 							}
-							var r_barberBought = vars.watchers["r_barberBought"];
+							var r_barberBought = vars.GetWatcher("r_barberBought");
 							if (r_barberBought.Changed && r_barberBought.Current == 1) {
 								return "r_barberBought";
 							}
-							var interior = vars.watchers["interior"];
+							var interior = vars.GetWatcher("interior");
 							if (interior.Changed) {
 								if (interior.Current == 2) {
 									return "r_barberEnter";
@@ -364,7 +356,7 @@ startup {
 							// 4 - What you waiting for fool?
 							// r_OnMission is set to 1 after Dialogue's "show me how they drive on the east coast" line
 							// and is a reliable way of telling we're past the intro cutscene.
-							var r_dialogueBlock = vars.watchers["40@"];
+							var r_dialogueBlock = vars.GetWatcher("40@");
 							if (r_dialogueBlock.Changed) {
 									if (r_dialogueBlock.Current == 1 && r_dialogueBlock.Old == 0) {
 										return "r_barberExit";
@@ -423,14 +415,14 @@ startup {
 					vars.missionNames.Add("Tagging up Turf","tut_marker");
 
 					Func<string> func_tut = () => {
-						if (!vars.ValidateMissionProgress("sweet1", "ls_sweet_chain", 0, 1, "tut_pass")) {
+						if (!vars.ValidateMissionProgress("sweet1", "ls_sweet_chain", 0, 1, "tut_pass", "tut")) {
 							return;
 						}
 
 						// Dialogue block:
 						// 4 - Hey, wait up!
 						// 6 - Like riding a bike ain't it boy
-						var tut_dialogueBlock = vars.watchers["48@"];
+						var tut_dialogueBlock = vars.GetWatcher("48@");
 						if (tut_dialogueBlock.Changed) {
 							if (tut_dialogueBlock.Old == 0 && tut_dialogueBlock.Current == 4) {
 								return "tut_introCutsceneEnd";
@@ -447,7 +439,7 @@ startup {
 						}
 
 						// Something also related to help boxes or something. Gets set to 1 when the cutscene ends, and to 2 shortly after.
-						var tut_cutsceneSweetSprayTagEnd = vars.watchers["65@"];
+						var tut_cutsceneSweetSprayTagEnd = vars.GetWatcher("65@");
 						if (tut_cutsceneSweetSprayTagEnd.Changed && tut_cutsceneSweetSprayTagEnd.Old == 0 && tut_cutsceneSweetSprayTagEnd.Current == 1) {
 							return "tut_cutsceneSweetSprayTagEnd";
 						}
@@ -458,7 +450,7 @@ startup {
 						// Upon entering Sweets car after spraying first 3 tags, it gets reset to 0
 						// On the drive, it gets set to 1.
 						// It gets set to 0 when leaving the car, then set back to 1 shortly after.
-						var tut_subPhase = vars.watchers["58@"];
+						var tut_subPhase = vars.GetWatcher("58@");
 						if (tut_subPhase.Changed) {
 							if (tut_subPhase.Old == 2 && tut_subPhase.Current == 0) {
 								return "tut_carEnterAfterTag3";
@@ -471,13 +463,13 @@ startup {
 						// A variable keeping track of which lines are to be said by the gang members.
 						// Set to 1 when the approach cutscene ended, or when it should have played if killing the gang members
 						// Set to 2 and then 3 as lines are spoken, or to 4 if gang members are dead
-						var tut_approachingGangMembers = vars.watchers["46@"];
+						var tut_approachingGangMembers = vars.GetWatcher("46@");
 						if (tut_approachingGangMembers.Changed && tut_approachingGangMembers.Old == 0 && tut_approachingGangMembers.Current == 1) {
 							return "tut_approachingGangMembers";
 						}
 
 						// "Get us back to the hood, CJ" line played
-						var tut_carEnterAfterTag6 = vars.watchers["40@"];
+						var tut_carEnterAfterTag6 = vars.GetWatcher("40@");
 						if (tut_carEnterAfterTag6.Changed && tut_carEnterAfterTag6.Old == 0 && tut_carEnterAfterTag6.Current == 1) {
 							return "tut_carEnterAfterTag6";
 						}
@@ -511,7 +503,7 @@ startup {
 					vars.missionNames.Add("Cleaning the Hoo","cth_marker");
 
 					Func<string> func_cth = () => {
-						if (!vars.ValidateMissionProgress("sweet1b", "ls_sweet_chain", 1, 2, "cth_pass")) {
+						if (!vars.ValidateMissionProgress("sweet1b", "ls_sweet_chain", 1, 2, "cth_pass", "cth")) {
 							return;
 						}
 
@@ -521,7 +513,7 @@ startup {
 						// 2 - After dealer dead cutscene
 						// 3 - Getting out of the car in front of the house
 						// 4 - Indoor combat done
-						var cth_stage = vars.watchers["102@"];
+						var cth_stage = vars.GetWatcher("102@");
 						if (cth_stage.Changed) {
 							if (cth_stage.Current == 1) {
 								return "cth_bDupVisited";
@@ -540,7 +532,7 @@ startup {
 						// 5 - Man, we on a serious mission now (1)
 						// 6 - Oooeee you can smell a crack den (1)
 						// 7 - Now that the base ain't getting pushed up (3)
-						var cth_dialogueBlock = vars.watchers["87@"];
+						var cth_dialogueBlock = vars.GetWatcher("87@");
 						if (cth_dialogueBlock.Changed) {
 							if (cth_dialogueBlock.Current == 4) {
 								return "cth_dealerApproached";
@@ -554,7 +546,7 @@ startup {
 						}
 
 						// When a dialogue block is selected, another variable is set as well to indicate the number of lines in this dialogue.
-						var cth_dialogueLength = vars.watchers["91@"];
+						var cth_dialogueLength = vars.GetWatcher("91@");
 						if (cth_dialogueLength.Changed) {
 							if (cth_dialogueLength.Current == 7) {
 								return "cth_cutsceneSkipped";
@@ -562,7 +554,7 @@ startup {
 						}
 
 						// Upon killing all 3 Ballas guys
-						var cth_crackDenCleared = vars.watchers["43@"];
+						var cth_crackDenCleared = vars.GetWatcher("43@");
 						if (cth_crackDenCleared.Changed && cth_crackDenCleared.Old == 0 && cth_crackDenCleared.Current == 1) {
 							return "cth_crackDenCleared";
 						}
@@ -591,7 +583,7 @@ startup {
 					vars.missionNames.Add("Drive-thru","dt_marker");
 
 					Func<string> func_dt = () => {
-						if (!vars.ValidateMissionProgress("sweet3", "ls_sweet_chain", 2, 3, "dt_pass")) {
+						if (!vars.ValidateMissionProgress("sweet3", "ls_sweet_chain", 2, 3, "dt_pass", "dt")) {
 							return;
 						}
 
@@ -604,7 +596,7 @@ startup {
 						// 6 - Hey thanks Carl
 						// 7 - My special!
 						// 8 - Watch the damn road
-						var dt_dialogueBlock = vars.watchers["79@"];
+						var dt_dialogueBlock = vars.GetWatcher("79@");
 						if (dt_dialogueBlock.Changed) {
 							if (dt_dialogueBlock.Current == 1) {
 								return "dt_introEnded";
@@ -666,7 +658,7 @@ startup {
 					vars.missionNames.Add("Nines and AK's","naak_marker");
 
 					Func<string> func_naak = () => {
-						if (!vars.ValidateMissionProgress("sweet2", "ls_sweet_chain", 3, 4, "naak_pass")) {
+						if (!vars.ValidateMissionProgress("sweet2", "ls_sweet_chain", 3, 4, "naak_pass", "naak")) {
 							return;
 						}
 
@@ -675,7 +667,7 @@ startup {
 						// 1 - Damn, you a killer baby, ice cold
 						// 2 - Whats going on man shit seems fucked up
 						// 3 - Speak; I thought you was representing
-						var naak_dialogueBlock = vars.watchers["39@"];
+						var naak_dialogueBlock = vars.GetWatcher("39@");
 						if (naak_dialogueBlock.Changed) {
 							if (naak_dialogueBlock.Current == 1) {
 								return "naak_postShootoutCutsceneStart";
@@ -687,7 +679,7 @@ startup {
 								return "naak_phoneCall";
 							}
 						}
-						var naak_dialogueLength = vars.watchers["48@"];
+						var naak_dialogueLength = vars.GetWatcher("48@");
 						if (naak_dialogueLength.Changed) {
 							if (naak_dialogueLength.Current == 8 && naak_dialogueLength.Old == 0) {
 								return "naak_cutsceneEnd";
@@ -699,10 +691,10 @@ startup {
 						// 0 - First bottle
 						// 3 - Second three bottles
 						// 6 - Final five bottles
-						var naak_combatActive = vars.watchers["62@"];
+						var naak_combatActive = vars.GetWatcher("62@");
 						if (naak_combatActive.Current == 1) {
-							var naak_smokeActions = vars.watchers["64@"];
-							var naak_bottlesShot = vars.watchers["36@"];
+							var naak_smokeActions = vars.GetWatcher("64@");
+							var naak_bottlesShot = vars.GetWatcher("36@");
 							if (naak_combatActive.Changed) {
 								if (naak_smokeActions.Current == 0) {
 									return "naak_round1Start";
@@ -727,7 +719,7 @@ startup {
 							}
 						}
 
-						var naak_interior = vars.watchers["86@"];
+						var naak_interior = vars.GetWatcher("86@");
 						if (naak_interior.Changed && naak_dialogueBlock.Current == 3) {
 							if (naak_interior.Current == 15 && naak_interior.Old == 0) {
 								return "naak_shopEnter";
@@ -773,7 +765,7 @@ startup {
 					vars.missionNames.Add("Drive-By","db_marker");
 
 					Func<string> func_db = () => {
-						if (!vars.ValidateMissionProgress("sweet4", "ls_sweet_chain", 4, 5, "db_pass")) {
+						if (!vars.ValidateMissionProgress("sweet4", "ls_sweet_chain", 4, 5, "db_pass", "db")) {
 							return;
 						}
 
@@ -784,7 +776,7 @@ startup {
 						// 6 - Drive to pay n spray
 						// 7 - Drive back
 						// 8 - Grove Cut
-						var db_stage = vars.watchers["db_stage"];
+						var db_stage = vars.GetWatcher("db_stage");
 						if (db_stage.Changed) {
 							switch ((int)db_stage.Current) {
 								case 3:
@@ -815,7 +807,7 @@ startup {
 							if (i % 4 == 0) {
 								db_groupKillCount = 0;
 							}
-							var db_kill = vars.watchers["db_kill"+i];
+							var db_kill = vars.GetWatcher("db_kill"+i);
 							if (db_kill.Current == 1) {
 								db_groupKillCount++;
 								if (db_kill.Changed) {
@@ -851,7 +843,7 @@ startup {
 					vars.missionNames.Add("Sweet's Girl","sg_marker");
 
 					Func<string> func_sg = () => {
-						if (!vars.ValidateMissionProgress("hoods5", "ls_sweet_chain", 5,  6, "sg_pass")) {
+						if (!vars.ValidateMissionProgress("hoods5", "ls_sweet_chain", 5,  6, "sg_pass", "sg")) {
 							return;
 						}
 
@@ -864,7 +856,7 @@ startup {
 						// 6 - Chase
 						// 7 - End cut
 						// 8 - Mission Passed
-						var sg_stage = vars.watchers["127@"];
+						var sg_stage = vars.GetWatcher("127@");
 						if (sg_stage.Changed) {
 							switch ((int)sg_stage.Current) {
 								case 2:
@@ -917,7 +909,7 @@ startup {
 					vars.missionNames.Add("Cesar Vialpando","cv_marker");
 
 					Func<string> func_cv = () => {
-						if (!vars.ValidateMissionProgress("sweet6", "ls_sweet_chain", 6, 7, "cv_pass")) {
+						if (!vars.ValidateMissionProgress("sweet6", "ls_sweet_chain", 6, 7, "cv_pass", "cv")) {
 							return;
 						}
 
@@ -938,8 +930,8 @@ startup {
 						// 6.1 = feedback cutscene
 						// 6.9 = cinematic cutscene with Kendl
 						// 7.0 = mission passed
-						var cv_stage = vars.watchers["34@"];
-						var cv_subStage = vars.watchers["35@"];
+						var cv_stage = vars.GetWatcher("34@");
+						var cv_subStage = vars.GetWatcher("35@");
 						if (cv_subStage.Changed) {
 							switch((int)cv_stage.Current) {
 								case 1:
@@ -1013,14 +1005,14 @@ startup {
 					vars.watchScmGlobalVariables.Add(2577, "d_cut1");
 
 					Func<string> func_d = () => {
-						if (!vars.ValidateMissionProgress("crash4", "ls_sweet_chain", 7, 8, "d_pass")) {
+						if (!vars.ValidateMissionProgress("crash4", "ls_sweet_chain", 7, 8, "d_pass", "d")) {
 							return;
 						}
-						var d_cut1 = vars.watchers["d_cut1"];
+						var d_cut1 = vars.GetWatcher("d_cut1");
 						if (d_cut1.Changed && d_cut1.Current == 1) {
 							return "d_cut1";
 						}
-						var d_cut2 = vars.watchers["d_cut2"];
+						var d_cut2 = vars.GetWatcher("d_cut2");
 						if (d_cut2.Changed && d_cut2.Current == 1) {
 							return "d_cut2";
 						}
@@ -1040,7 +1032,7 @@ startup {
 					vars.missionNames.Add("Los Sepulcros","ls_marker");
 
 					Func<string> func_ls = () => {
-						if (!vars.ValidateMissionProgress("sweet7", "ls_sweet_chain", 8, 9, "ls_pass")) {
+						if (!vars.ValidateMissionProgress("sweet7", "ls_sweet_chain", 8, 9, "ls_pass", "ls")) {
 							return;
 						}
 						return;
@@ -1091,7 +1083,7 @@ startup {
 						vars.missionNames.Add("OG Loc","ogl_marker");
 
 						Func<string> func_ogl = () => {
-							if (!vars.ValidateMissionProgress("twar7", "ls_smoke_chain", 0, 1, "ogl_pass")) {
+							if (!vars.ValidateMissionProgress("twar7", "ls_smoke_chain", 0, 1, "ogl_pass", "ogl")) {
 								return;
 							}
 
@@ -1105,7 +1097,7 @@ startup {
 							// 15 Target dead
 							// 16 Drive to burger shot
 							// 17 At burger shot
-							var ogl_stage = vars.watchers["67@"];
+							var ogl_stage = vars.GetWatcher("67@");
 							if (ogl_stage.Changed) {
 								switch ((int)ogl_stage.Current) {
 									case 1:
@@ -1144,7 +1136,7 @@ startup {
 								}
 							}
 							// Unsure what this variable does exactly
-							var ogl_subStage = vars.watchers["68@"];
+							var ogl_subStage = vars.GetWatcher("68@");
 							if (ogl_subStage.Changed) {
 								if (ogl_subStage.Current == 1) {
 									if (ogl_stage.Current == 1) {
@@ -1181,19 +1173,19 @@ startup {
 						vars.missionNames.Add("Running Dog","rd_marker");
 
 						Func<string> func_rd = () => {
-							if (!vars.ValidateMissionProgress("smoke2", "ls_smoke_chain", 1, 2, "rd_pass")) {
+							if (!vars.ValidateMissionProgress("smoke2", "ls_smoke_chain", 1, 2, "rd_pass", "rd")) {
 								return;
 							}
 
-							var rd_car = vars.watchers["162@"];
+							var rd_car = vars.GetWatcher("162@");
 							if (rd_car.Changed && rd_car.Current == 1) {
 								return "rd_car";
 							}
-							var rd_arrive = vars.watchers["166@"];
+							var rd_arrive = vars.GetWatcher("166@");
 							if (rd_arrive.Changed && rd_arrive.Current == 1) {
 								return "rd_arrive";
 							}
-							var rd_chaseStart = vars.watchers["181@"];
+							var rd_chaseStart = vars.GetWatcher("181@");
 							if (rd_chaseStart.Changed && rd_chaseStart.Current == 1) {
 								return "rd_chaseStart";
 							}
@@ -1235,10 +1227,10 @@ startup {
 						vars.watchScmMissionLocalVariables.Add(128);	// audio_label_s3
 
 						Func<string> func_wsott = () => {
-							if (!vars.ValidateMissionProgress("smoke3", "ls_smoke_chain", 2, 3, "wsott_pass")) {
+							if (!vars.ValidateMissionProgress("smoke3", "ls_smoke_chain", 2, 3, "wsott_pass", "wsott")) {
 								return;
 							}
-							var wsott_stage = vars.watchers["80@"];
+							var wsott_stage = vars.GetWatcher("80@");
 							if (wsott_stage.Changed) {
 								switch ((int)wsott_stage.Current) {
 									case 1:
@@ -1255,7 +1247,7 @@ startup {
 										break;
 								}
 							}
-							var wsott_bikeEntered = vars.watchers["128@"];
+							var wsott_bikeEntered = vars.GetWatcher("128@");
 							if (wsott_bikeEntered.Changed && wsott_bikeEntered.Current == 35420) {
 								// Audio data for Smoke's line "Follow that train".
 								return "wsott_bikeEntered";
@@ -1266,7 +1258,7 @@ startup {
 								if (i == 3 && wsott_freshKill && wsott_kills == 3) {
 									vars.TrySplit("wsott_subWin");
 								}
-								var wsott_guy = vars.watchers[(87+i)+"@"];
+								var wsott_guy = vars.GetWatcher((87+i)+"@");
 								if (wsott_guy.Changed && wsott_guy.Current == 1) {
 									wsott_freshKill = true;
 									vars.TrySplit("wsott_guy"+i);
@@ -1307,10 +1299,10 @@ startup {
 						vars.watchScmGlobalVariables.Add(6898, "jb_atriumStage");
 
 						Func<string> func_jb = () => {
-							if (!vars.ValidateMissionProgress("drugs1", "ls_smoke_chain", 3, 4, "jb_pass")) {
+							if (!vars.ValidateMissionProgress("drugs1", "ls_smoke_chain", 3, 4, "jb_pass", "jb")) {
 								return;
 							}
-							var jb_stage = vars.watchers["90@"];
+							var jb_stage = vars.GetWatcher("90@");
 							if (jb_stage.Changed) {
 								switch ((int)jb_stage.Current) {
 									case 1:
@@ -1333,7 +1325,7 @@ startup {
 										break;
 								}
 							}
-							var jb_atriumStage = vars.watchers["jb_atriumStage"];
+							var jb_atriumStage = vars.GetWatcher("jb_atriumStage");
 							if (jb_atriumStage.Changed) {
 								switch ((int)jb_atriumStage.Current) {
 									case 3:
@@ -1353,7 +1345,7 @@ startup {
 										break;
 								}
 							}
-							var jb_chaseBlock = vars.watchers["243@"];
+							var jb_chaseBlock = vars.GetWatcher("243@");
 							if (jb_chaseBlock.Changed && jb_chaseBlock.Current == 1) {
 								return "jb_chaseBlock";
 							}
@@ -1386,17 +1378,17 @@ startup {
 						vars.missionNames.Add("Life's a Beach","lab_marker");
 
 						Func<string> func_lab = () => {
-							if (!vars.ValidateMissionProgress("music1", "ls_ogloc_chain", 0, 1, "lab_pass")) {
+							if (!vars.ValidateMissionProgress("music1", "ls_ogloc_chain", 0, 1, "lab_pass", "lab")) {
 								return;
 							}
 							// Other vars I found but couldn't determine consistency/usefulness:
 							// 193@ - approaching the beach (party spawns in)
 							// 189@ - "Hes Stealing the Sounds"
-							var lab_partyObserved = vars.watchers["279@"];
+							var lab_partyObserved = vars.GetWatcher("279@");
 							if (lab_partyObserved.Changed && lab_partyObserved.Current == 1) {
 								return "lab_partyObserved";
 							}
-							var lab_vanEntered = vars.watchers["207@"];
+							var lab_vanEntered = vars.GetWatcher("207@");
 							if (lab_vanEntered.Changed && lab_vanEntered.Current == 1) {
 								return "lab_vanEntered";
 							}
@@ -1429,7 +1421,7 @@ startup {
 						vars.missionNames.Add("Madd Dogg's Rhym","mdr_marker");
 
 						Func<string> func_mdr = () => {
-							if (!vars.ValidateMissionProgress("music2","ls_ogloc_chain",1,2,"mdr_pass")) {
+							if (!vars.ValidateMissionProgress("music2","ls_ogloc_chain",1,2,"mdr_pass", "mdr")) {
 								return;
 							}
 							// Stage:
@@ -1439,7 +1431,7 @@ startup {
 							// 3 - Book grabbed
 							// 5 - Mansion exited
 							// 6 - End cut
-							var mdr_stage = vars.watchers["70@"];
+							var mdr_stage = vars.GetWatcher("70@");
 							if (mdr_stage.Changed) {
 								switch ((int)mdr_stage.Current) {
 									case 1:
@@ -1462,7 +1454,7 @@ startup {
 							if (mdr_stage.Current != 2) {
 								return;
 							}
-							var mdr_room = vars.watchers["71@"];
+							var mdr_room = vars.GetWatcher("71@");
 							if (mdr_room.Changed) {
 								if (mdr_room.Current == 6) {
 									return "mdr_poolArea";
@@ -1471,7 +1463,7 @@ startup {
 									return "mdr_gamingArea";
 								}
 							}
-							var mdr_alcoveArea = vars.watchers["73@"];
+							var mdr_alcoveArea = vars.GetWatcher("73@");
 							if (mdr_alcoveArea.Changed && mdr_alcoveArea.Current == 1) {
 								return "mdr_alcoveArea";
 							}
@@ -1503,7 +1495,7 @@ startup {
 						vars.missionNames.Add("Management Issue","mi_marker");
 
 						Func<string> func_mi = () => {
-							if (!vars.ValidateMissionProgress("music3","ls_ogloc_chain",2,3,"mi_pass")) {
+							if (!vars.ValidateMissionProgress("music3","ls_ogloc_chain",2,3,"mi_pass", "mi")) {
 								return;
 							}
 							// Stage:
@@ -1514,7 +1506,7 @@ startup {
 							// 5 = Chase started
 							// 6 = Car dunked, but spotted.
 							// 7 = Car dunked
-							var mi_stage = vars.watchers["122@"];
+							var mi_stage = vars.GetWatcher("122@");
 							if (mi_stage.Changed) {
 								switch((int)mi_stage.Current) {
 									case 1:
@@ -1543,7 +1535,7 @@ startup {
 							// 7 - phone ringing
 							// 8 - keep frosty guys
 							// everything else is cutscene or chase dialogue and does not get set straight away
-							var mi_dialogueBlock = vars.watchers["174@"];
+							var mi_dialogueBlock = vars.GetWatcher("174@");
 							if (mi_dialogueBlock.Changed) {
 								switch((int)mi_dialogueBlock.Current) {
 									case 7:
@@ -1555,7 +1547,7 @@ startup {
 								}
 							}
 							// variable to show the "park the car straight" objective
-							var mi_convoyApproach = vars.watchers["160@"];
+							var mi_convoyApproach = vars.GetWatcher("160@");
 							if (mi_convoyApproach.Changed && mi_convoyApproach.Current == 1) {
 								return "mi_convoyApproach";
 							}
@@ -1584,9 +1576,9 @@ startup {
 						vars.watchScmMissionLocalVariables.Add(80);	// music5_goals
 
 						Func<string> func_hp = () => {
-							var mission_chain = vars.watchers["ls_ogloc_chain"];
+							var mission_chain = vars.GetWatcher("ls_ogloc_chain");
 							if (mission_chain.Current >= 3 && mission_chain.Current < 5) {
-								var thread = vars.watchers["thread"];
+								var thread = vars.GetWatcher("thread");
 								if (thread.Changed) {
 									if (thread.Current == "music5") {
 										return mission_chain.Current == 3 ? "hp1_start" : "hp2_start";
@@ -1612,7 +1604,7 @@ startup {
 							// 2: Enemies on bridge
 							// 3: Big fight all round
 							// 4: Fight over, wait for cutscene
-							var hp_stage = vars.watchers["80@"];
+							var hp_stage = vars.GetWatcher("80@");
 							if (hp_stage.Changed) {
 								switch((int)hp_stage.Current) {
 									case 1:
@@ -1672,7 +1664,7 @@ startup {
 						vars.watchScmMissionLocalVariables.Add(209);	// countTargetRoomsHit
 
 						Func<string> func_bd = () => {
-							if (!vars.ValidateMissionProgress("crash1", "ls_crash_chain", 0, 1, "bd_pass")) {
+							if (!vars.ValidateMissionProgress("crash1", "ls_crash_chain", 0, 1, "bd_pass", "bd")) {
 								return;
 							}
 							// stage.goal:
@@ -1688,9 +1680,9 @@ startup {
 							// 7 house left
 							// 7.4 arrived at denise's house
 							// 7.11 denise waves player goodbye
-							var bd_stage = vars.watchers["34@"];
+							var bd_stage = vars.GetWatcher("34@");
 							if (bd_stage.Current == 2 || bd_stage.Old == 2) {
-								var bd_windowsTorched = vars.watchers["209@"];
+								var bd_windowsTorched = vars.GetWatcher("209@");
 								if (bd_windowsTorched.Changed) {
 									vars.TrySplit("bd_window"+bd_windowsTorched.Current);
 								}
@@ -1720,7 +1712,7 @@ startup {
 										break;
 								}
 							}
-							var bd_goals = vars.watchers["35@"];
+							var bd_goals = vars.GetWatcher("35@");
 							if (bd_goals.Changed) {
 								if (bd_stage.Current == 1) {
 									if (bd_goals.Current == 4) {
@@ -1806,7 +1798,7 @@ startup {
 
 
 						Func<string> func_hi = () => {
-							if (!vars.ValidateMissionProgress("guns1", "ls_ryder_chain", 0, 1, "hi_pass")) {
+							if (!vars.ValidateMissionProgress("guns1", "ls_ryder_chain", 0, 1, "hi_pass", "hi")) {
 								return;
 							}
 							// progression flag:
@@ -1817,7 +1809,7 @@ startup {
 							// 5 - house entered
 							// 6 - burglary start
 							// 8 - drive off
-							var hi_stage = vars.watchers["51@"];
+							var hi_stage = vars.GetWatcher("51@");
 							if (hi_stage.Changed) {
 								switch ((int)hi_stage.Current) {
 									case 1:
@@ -1840,16 +1832,16 @@ startup {
 										break;
 								}
 							}
-							var hi_gunboxDroppedOff = vars.watchers["35@"];
+							var hi_gunboxDroppedOff = vars.GetWatcher("35@");
 							if (hi_gunboxDroppedOff.Changed && hi_gunboxDroppedOff.Current > 1) {
 								return "hi_boxDrop" + hi_gunboxDroppedOff.Old;
 							}
-							var hi_endCut = vars.watchers["88@"];
+							var hi_endCut = vars.GetWatcher("88@");
 							if (hi_endCut.Changed && hi_endCut.Old == 1 && hi_endCut.Current == 0) {
 								return "hi_endCut";
 							}
-							var hi_inHouse = vars.watchers["95@"];
-							var hi_holdingBox = vars.watchers["60@"];
+							var hi_inHouse = vars.GetWatcher("95@");
+							var hi_holdingBox = vars.GetWatcher("60@");
 							if (hi_gunboxDroppedOff.Current > 0) {
 								if (hi_inHouse.Changed) {
 									if (hi_inHouse.Current == 1 && hi_inHouse.Old == 0) {
@@ -1863,7 +1855,7 @@ startup {
 									return "hi_boxGrab" + hi_gunboxDroppedOff.Current;
 								}
 							}
-							var hi_enteredVan = vars.watchers["254@"];
+							var hi_enteredVan = vars.GetWatcher("254@");
 							if (hi_enteredVan.Changed && hi_enteredVan.Current == 38) {
 								// "Let's get up out of here" line
 								return "hi_enteredVan";
@@ -1895,21 +1887,21 @@ startup {
 					vars.watchScmMissionLocalVariables.Add(34);
 
 					Func<string> func_hslr = () => {
-						var ls_cesar_chain = vars.watchers["ls_cesar_chain"];
+						var ls_cesar_chain = vars.GetWatcher("ls_cesar_chain");
 						if (ls_cesar_chain.Current >= 1) {
 							if (ls_cesar_chain.Changed && ls_cesar_chain.Old == 0) {
 								return "hslr_pass";
 							}
 							return;
 						}
-						var hslr_raceStart = vars.watchers["hslr_raceStart"];
+						var hslr_raceStart = vars.GetWatcher("hslr_raceStart");
 						if (hslr_raceStart.Changed && hslr_raceStart.Current == 2) {
 							return "hslr_raceStart";
 						}
 						if (vars.lastStartedMission != "cesar1") {
 							return;
 						}
-						var hslr_cutEnd = vars.watchers["34@"];
+						var hslr_cutEnd = vars.GetWatcher("34@");
 						if (hslr_cutEnd.Changed && hslr_cutEnd.Current == 1) {
 							return "hslr_cutEnd";
 						}
@@ -1954,7 +1946,7 @@ startup {
 
 		#endregion
 		#region Side Missions
-			settings.CurrentDefaultParent = null;
+			settings.CurrentDefaultParent = "Splits";
 			settings.Add("SideMissions", true, "Side Missions");
 
 			#region Courier
@@ -2004,23 +1996,23 @@ startup {
 					if (vars.lastStartedMission != "bcour") {
 						return;
 					}
-					var courier1_pass = vars.watchers["courier1_pass"];
+					var courier1_pass = vars.GetWatcher("courier1_pass");
 					if (courier1_pass.Changed && courier1_pass.Current == 1) {
 						vars.TrySplit("courier1_pass");
 					}
-					var courier2_pass = vars.watchers["courier2_pass"];
+					var courier2_pass = vars.GetWatcher("courier2_pass");
 					if (courier2_pass.Changed && courier2_pass.Current == 1) {
 						vars.TrySplit("courier2_pass");
 					}
-					var courier3_pass = vars.watchers["courier3_pass"];
+					var courier3_pass = vars.GetWatcher("courier3_pass");
 					if (courier3_pass.Changed && courier3_pass.Current == 1) {
 						vars.TrySplit("courier3_pass");
 					}
-					var courier_active = vars.watchers["courier_active"];
+					var courier_active = vars.GetWatcher("courier_active");
 					if (courier_active.Current == 0) {
 						return;
 					}
-					var courier_city = vars.watchers["872@"];
+					var courier_city = vars.GetWatcher("872@");
 					var ccc = courier_city.Current;
 					if (courier_city.Changed && ccc != 0) {
 						return "courier"+ccc+"_start";
@@ -2035,9 +2027,9 @@ startup {
 					else {
 						courier_levelAddress = "762@";
 					}
-					var courier_level = vars.watchers[courier_levelAddress];
+					var courier_level = vars.GetWatcher(courier_levelAddress);
 					var ccl = courier_level.Current + 1;
-					var courier_checkpoints = vars.watchers["757@"];
+					var courier_checkpoints = vars.GetWatcher("757@");
 					var ccp = "courier"+ccc+"_level"+ccl;
 					if (courier_checkpoints.Changed && courier_checkpoints.Current > 0) {
 						vars.TrySplit(ccp+"_delivery"+courier_checkpoints.Current);
@@ -2102,7 +2094,7 @@ startup {
 					}
 					// Mission order: Extinguish fire, advance level, pass mission.
 					// So we want to split them in that order too just to be clean.
-					var firefighter_firesExtinguished = vars.watchers["firefighter_firesExtinguished"];
+					var firefighter_firesExtinguished = vars.GetWatcher("firefighter_firesExtinguished");
 					if (firefighter_firesExtinguished.Changed) {
 						var c = firefighter_firesExtinguished.Current;
 						var o = firefighter_firesExtinguished.Old;
@@ -2111,14 +2103,14 @@ startup {
 							vars.TrySplit("firefighter_fire"+i);
 						}
 					}
-					var firefighter_currentLevel = vars.watchers["firefighter_currentLevel"];
+					var firefighter_currentLevel = vars.GetWatcher("firefighter_currentLevel");
 					if (firefighter_currentLevel.Changed) {
 						if (firefighter_currentLevel.Old > 0 && firefighter_currentLevel.Current > firefighter_currentLevel.Old) {
 							vars.TrySplit("firefighter_level"+firefighter_currentLevel.Old);
 							return;
 						}
 					}
-					var firefighter_passed = vars.watchers["firefighter_passed"];
+					var firefighter_passed = vars.GetWatcher("firefighter_passed");
 					if (firefighter_passed.Changed && firefighter_passed.Current == 2) {
 						vars.TrySplit("firefighter_pass");
 					}
@@ -2209,7 +2201,7 @@ startup {
 					if (vars.lastStartedMission != "cprace") {
 						return;
 					}
-					var race_index = vars.watchers["race_index"];
+					var race_index = vars.GetWatcher("race_index");
 					var race_lapped = false;
 					var race_checkpointAddress = "262@";	// Common races
 					if (race_index.Current == 7 || race_index.Current == 8) {
@@ -2224,14 +2216,14 @@ startup {
 					}
 					// race_checkpoint indicates the CP the player is currently headed for.
 					// it's set to 0 during countdown, so a change 0>1 means GO! signal given
-					var race_checkpoint = vars.watchers[race_checkpointAddress];
+					var race_checkpoint = vars.GetWatcher(race_checkpointAddress);
 					var splitName = "race"+race_index.Current;
-					var race_passed = vars.watchers[splitName];
+					var race_passed = vars.GetWatcher(splitName);
 					if (race_passed.Changed && race_passed.Current == 1) {
 						vars.TrySplit(splitName+"_pass");
 					}
 					if (race_lapped) {
-						var race_lap = vars.watchers["284@"];
+						var race_lap = vars.GetWatcher("284@");
 						splitName = splitName + "lap"+race_lap.Old;
 						if (race_lap.Changed && race_lap.Current > race_lap.Old) {
 							vars.TrySplit(splitName);
@@ -2304,7 +2296,7 @@ startup {
 						if (i == 2) {
 							continue;
 						}
-						var property_purchased = vars.watchers["Property"+i];
+						var property_purchased = vars.GetWatcher("Property"+i);
 						if (property_purchased.Changed && property_purchased.Current == 1) {
 							return "Property"+i;
 						}
@@ -2465,7 +2457,7 @@ startup {
 					0x07B8E818, 0xFCA04190, 0x0EB05678, 0x4220E788, 0x2AF0E658,
 					0x48CDBE0C, 0x3560CFF0, 0x4348AC18, 0x5BD818E0, 0x07584418,
 				};
-				settings.CurrentDefaultParent = null;
+				settings.CurrentDefaultParent = "Splits";
 				settings.Add("Collectibles", false, "Collectibles");
 				settings.CurrentDefaultParent = "Collectibles";
 				settings.Add("Tags", false);
@@ -2535,11 +2527,11 @@ startup {
 				vars.AddNonScmAddressWatcher(0x69AD74, "TagEach", 1);
 				vars.watchScmGlobalVariables.Add(1519, "TagAll"); // $ALL_TAGS_SPRAYED
 				Func<string> func_tags = () => {
-					var tag_allCollected = vars.watchers["TagAll"];
+					var tag_allCollected = vars.GetWatcher("TagAll");
 					if (tag_allCollected.Changed && tag_allCollected.Current == 1 && tag_allCollected.Old == 0) {
 						vars.TrySplit("TagAll");
 					}
-					var tag_totalCollected = vars.watchers["TagEach"];
+					var tag_totalCollected = vars.GetWatcher("TagEach");
 					if (tag_totalCollected.Changed && tag_totalCollected.Current > tag_totalCollected.Old) {
 						vars.TrySplit("TagEach"+tag_totalCollected.Current);
 					}
@@ -2548,13 +2540,16 @@ startup {
 						return;
 					}
 
-					// Check collection state of each tag
+					// Check collection state of specific tags
+					if (!vars.CheckSetting("TagSpecific")) {
+						return;
+					}
 					byte tag_collectedNow = 255;
 					for (int i = 0; i < 100; i++) {
 						if (tag_collectedNow < 100) {
 							break;
 						}
-						var collectionStatus = vars.watchers["TagSpecific"+i];
+						var collectionStatus = vars.GetWatcher("TagSpecific"+i);
 						if (collectionStatus.Changed && collectionStatus.Current >= 229 && collectionStatus.Old <= 228) {
 							// Collection status changed, Split!
 							tag_collectedNow = (byte)i;
@@ -2594,9 +2589,12 @@ startup {
 				vars.watchScmGlobalVariables.Add(1518, "SnapshotAll"); // $ALL_PHOTOS_TAKEN
 				vars.watchScmGlobalVariables.Add(1516, "OysterAll"); // $ALL_OUSTERS_COLLECTED
 				Func<string> func_collectibles = () => {
-					var horseshoe_allCollected = vars.watchers["HorseshoeAll"];
-					var snapshot_allCollected = vars.watchers["SnapshotAll"];
-					var oyster_allCollected = vars.watchers["OysterAll"];
+					if (!vars.CheckSetting("Collectibles")) {
+						return;
+					}
+					var horseshoe_allCollected = vars.GetWatcher("HorseshoeAll");
+					var snapshot_allCollected = vars.GetWatcher("SnapshotAll");
+					var oyster_allCollected = vars.GetWatcher("OysterAll");
 					if (horseshoe_allCollected.Changed && horseshoe_allCollected.Current == 1 && horseshoe_allCollected.Old == 0) {
 						vars.TrySplit("HorseshoeAll");
 					}
@@ -2606,9 +2604,9 @@ startup {
 					else if (oyster_allCollected.Changed && oyster_allCollected.Current == 1 && oyster_allCollected.Old == 0) {
 						vars.TrySplit("OysterAll");
 					}
-					var horseshoe_totalCollected = vars.watchers["HorseshoeEach"];
-					var snapshot_totalCollected = vars.watchers["SnapshotEach"];
-					var oyster_totalCollected = vars.watchers["OysterEach"];
+					var horseshoe_totalCollected = vars.GetWatcher("HorseshoeEach");
+					var snapshot_totalCollected = vars.GetWatcher("SnapshotEach");
+					var oyster_totalCollected = vars.GetWatcher("OysterEach");
 					var collectibles_totalCollected = horseshoe_totalCollected.Old+snapshot_totalCollected.Old+oyster_totalCollected.Old;
 					if (horseshoe_totalCollected.Changed && horseshoe_totalCollected.Current > horseshoe_totalCollected.Old) {
 						vars.TrySplit("HorseshoeEach"+horseshoe_totalCollected.Current);
@@ -2624,10 +2622,13 @@ startup {
 						return;
 					}
 
+					if (!vars.CheckSetting("SnapshotSpecific") && !vars.CheckSetting("OysterSpecific") && !vars.CheckSetting("HorseshoeSpecific")) {
+						return;
+					}
 					byte collectible_addressesIncorrect = 0;
 					byte collectible_collectedNow = 255;
 					for (byte i = 0; i < 150; i++) {
-						var id = vars.watchers["CollectibleIdCheck"+i].Current;
+						var id = vars.GetWatcher("CollectibleIdCheck"+i).Current;
 						// Check if this collectible's id is what we expect.
 						if ((uint)id != vars.collectible_identifiers_msb[i]) {
 							collectible_addressesIncorrect++;
@@ -2643,7 +2644,7 @@ startup {
 							continue;
 						}
 						// Check if we collected any
-						var collectionStatus = vars.watchers["CollectibleSpecific"+i];
+						var collectionStatus = vars.GetWatcher("CollectibleSpecific"+i);
 						if (i < 50 || i >= 100) {
 							// Horseshoes & Oysters
 							if (!collectionStatus.Changed) {
@@ -2719,11 +2720,11 @@ startup {
 				vars.AddNonScmAddressWatcher(0x779064, "Completed Stunt JumpEach", 1);
 				vars.AddNonScmAddressWatcher(0x779060, "Found Stunt JumpEach", 1);
 				Func<string> func_usj = () => {
-					var usj_totalCompleted = vars.watchers["Completed Stunt JumpEach"];
+					var usj_totalCompleted = vars.GetWatcher("Completed Stunt JumpEach");
 					if (usj_totalCompleted.Changed && usj_totalCompleted.Current > usj_totalCompleted.Old) {
 						vars.TrySplit("Completed Stunt JumpEach"+usj_totalCompleted.Current);
 					}
-					var usj_totalfound = vars.watchers["Found Stunt JumpEach"];
+					var usj_totalfound = vars.GetWatcher("Found Stunt JumpEach");
 					if (usj_totalfound.Changed && usj_totalfound.Current > usj_totalfound.Old) {
 						vars.TrySplit("Found Stunt JumpEach"+usj_totalfound.Current);
 					}
@@ -2732,13 +2733,16 @@ startup {
 						return;
 					}
 
+					if (!vars.CheckSetting("Found Stunt JumpSpecific") && !vars.CheckSetting("Completed Stunt JumpSpecific")) {
+						return;
+					}
 					var usj_completedNow = 255;
 					var usj_foundNow = 255;
 					for (int i = 0; i < 70; i++) {
 						if (usj_completedNow < 70 || usj_foundNow < 70) {
 							break;
 						}
-						var usj_status = vars.watchers["Stunt JumpSpecific"+i];
+						var usj_status = vars.GetWatcher("Stunt JumpSpecific"+i);
 						if (usj_status.Changed) {
 							// Collection status changed, Split!
 							if (usj_status.Current == 256 && usj_status.Old == 0) {
@@ -2761,7 +2765,7 @@ startup {
 			#endregion Stunt Jumps
 		#endregion
 		#region Other
-			settings.CurrentDefaultParent = null;
+			settings.CurrentDefaultParent = "Splits";
 			settings.Add("Other", false);
 			#region Gang Territories
 				settings.Add("GangTerritories", false, "Gang Territories", "Other");
@@ -2803,8 +2807,8 @@ startup {
 				}
 				settings.Add("GT_LS_Specific", false, "Specific Territories", "GT_LS");
 				settings.Add("GT_RTLS_Specific", false, "Specific Territories", "GT_RTLS");
-				settings.SetToolTip("GT_LS_Held", "For reference: https://static.wikia.nocookie.net/gtawiki/images/4/40/TerritoriesNamesGTASA-map.png");
-				settings.SetToolTip("GT_RTLS_Held", "For reference: https://static.wikia.nocookie.net/gtawiki/images/4/40/TerritoriesNamesGTASA-map.png");
+				settings.SetToolTip("GT_LS_Specific", "For reference: https://static.wikia.nocookie.net/gtawiki/images/4/40/TerritoriesNamesGTASA-map.png");
+				settings.SetToolTip("GT_RTLS_Specific", "For reference: https://static.wikia.nocookie.net/gtawiki/images/4/40/TerritoriesNamesGTASA-map.png");
 
 				vars.AddNonScmAddressWatcher(0x7791D0, "GT_count", 1);
 				// Regions, as listed and ordered in the info.zon data file.
@@ -3413,6 +3417,14 @@ startup {
 					"STAR1", "RING", "LDOC2", "LIND3", "LIND4a", "WWE1", "LDT8", 
 				};
 				vars.GT_TerritoryCount = vars.GT_TerritoryIndices.Count;
+				vars.GT_OGTerritories = new HashSet<int> {
+					201,202,116,120,119,111,112,190,191,184,
+					185,186,192,144,145,147,146,168,166,167,
+					323,137,143,142,141,157,140,160,161,162,
+					156,158,155,163,164,165,153,154,152,135,
+					136,132,133,134,148,150,149,104,105,106,
+					107,374,369,
+				};
 				foreach (var entry in GT_ZoneNames) {
 					settings.Add("GT_LS_z"+entry.Key, false, entry.Value, "GT_LS_Specific");
 					settings.Add("GT_RTLS_z"+entry.Key, false, entry.Value, "GT_RTLS_Specific");
@@ -3463,15 +3475,15 @@ startup {
 				// Byte 16: Some value, values between 0x40 - 0x5F means the map zone is flashing. Usually set to 0x46 or 0x47? IDK what it means exactly.
 				// Byte 16: Unsure, some value. Could actually be the first byte of the next zone instead of the last of this. Didn't check.
 				Func<string> func_GangTerritories = () => {
-					var ls_sweet_chain = vars.watchers["ls_sweet_chain"];
-					var ls_crash_chain = vars.watchers["ls_crash_chain"];
+					var ls_sweet_chain = vars.GetWatcher("ls_sweet_chain");
+					var ls_crash_chain = vars.GetWatcher("ls_crash_chain");
 					if (ls_sweet_chain.Current < 7 && ls_crash_chain.Current < 1) {
 						// Cesar Vialpando or Burning Desire not passed
 						return;
 					}
 					var GT_splitPrefix = "GT_LS_";
-					var ls_final_chain = vars.watchers["ls_final_chain"];
-					var rtls_mansion_chain = vars.watchers["rtls_mansion_chain"];
+					var ls_final_chain = vars.GetWatcher("ls_final_chain");
+					var rtls_mansion_chain = vars.GetWatcher("rtls_mansion_chain");
 					if (rtls_mansion_chain.Current < 2 && ls_final_chain.Current >= 2) {
 						// Past LS, before RTLS
 						return;
@@ -3480,7 +3492,7 @@ startup {
 						GT_splitPrefix = "GT_RTLS_";
 					}
 					// Check count
-					var GT_count = vars.watchers["GT_count"];
+					var GT_count = vars.GetWatcher("GT_count");
 					if (GT_count.Changed) {
 						if (GT_count.Current > GT_count.Old) {
 							vars.TrySplit(GT_splitPrefix + GT_count.Current);
@@ -3489,9 +3501,13 @@ startup {
 					// Check specific regions
 					GT_splitPrefix += "r";
 					for (int i = 0; i < vars.GT_TerritoryCount; i++) {
-						var GT_x = vars.watchers["GT_"+i];
-						var GT_cx = vars.watchers["GT_c"+i];
+						if (!settings["GT_LS_zOther"] && !settings["GT_RTLS_zOther"] && !vars.GT_OGTerritories.Contains(i)) {
+							continue;
+						}
+						var GT_x = vars.GetWatcher("GT_"+i);
+						var GT_cx = vars.GetWatcher("GT_c"+i);
 						if (GT_x.Changed || GT_cx.Changed) {
+							
 							var GT_ballasCurrent = (byte)(GT_x.Current & 0xFF);
 							var GT_groveCurrent = (byte)(GT_x.Current >> 8 & 0xFF);
 							var GT_yellowCurrent = (byte)(GT_x.Current >> 16 & 0xFF);
@@ -3539,8 +3555,12 @@ startup {
 				settings.Add("PhoneCalls", false, "Phone Calls", "Other");
 				settings.CurrentDefaultParent = "PhoneCalls";
 				// Calls:
+				// 6 - House Party reminder call
 				// 7 - Cesar to unlock High Stakes, Low-Rider
 				// 9 - Officer Hernandez
+				// 11 - HSLR Fail call
+				// 12 - Burning Desire unlock call
+				// 18 - Doberman unlock call
 				// 19 - Sweet early missable phonecall
 				// 20 - Sweet gym call (not fat)
 				// 21 - * * Sweet gym call (fat)
@@ -3580,7 +3600,7 @@ startup {
 						if (badCalls.Contains(i)) {
 							continue;
 						}
-						var phonecall_taken = vars.watchers["PhoneCall"+i];
+						var phonecall_taken = vars.GetWatcher("PhoneCall"+i);
 						if (phonecall_taken.Changed && phonecall_taken.Current == 1) {
 							return "PhoneCall"+i;
 						}
@@ -4983,17 +5003,17 @@ init {
 			int tupleAddress = tuple.Item3;
 			//vars.DebugOutput("Changing Watcher (chng): " + tupleName + " 0x" + tupleAddress.ToString());
 
-			vars.watchers.Remove(vars.watchers[tupleName]);
+			vars.watcherList.Remove(vars.GetWatcher(tupleName));
 			switch (tupleType) {
 				case 1:
-					vars.watchers.Add(
+					vars.watcherList.Add(
 						new MemoryWatcher<byte>(
 							new DeepPointer(tupleAddress+offset)
 						) { Name = tupleName }
 					);
 					break;
 				case 2:
-					vars.watchers.Add(
+					vars.watcherList.Add(
 						new MemoryWatcher<short>(
 							new DeepPointer(tupleAddress+offset)
 						) { Name = tupleName }
@@ -5001,7 +5021,7 @@ init {
 					break;
 				case 4:
 				default:
-					vars.watchers.Add(
+					vars.watcherList.Add(
 						new MemoryWatcher<int>(
 							new DeepPointer(tupleAddress+offset)
 						) { Name = tupleName }
@@ -5014,7 +5034,8 @@ init {
 	vars.ChangeAddressWatchers = ChangeAddressWatchers;
 
 	// Create MemoryWatcherList
-	vars.watchers = new MemoryWatcherList();
+	vars.watcherList = new MemoryWatcherList();
+	vars.currentWatchers = new HashSet<string>();
 	vars.DebugOutput("Watcher List Cleared");
 
 	// Add some very basic addresses
@@ -5023,8 +5044,8 @@ init {
 
 	vars.AddNonScmAddressWatcher(playingTimeAddr, "playingTime", 4);
 	vars.DebugOutput("Adding String Pointer Watcher (strn): thread");
-	vars.watchers.Add(new StringWatcher(new DeepPointer(threadAddr, 0x8), 10) { Name = "thread" });
-	vars.watchers.Add(new StringWatcher(new DeepPointer(missionTextAddr), 16) { Name = "missionStartText" });
+	vars.watcherList.Add(new StringWatcher(new DeepPointer(threadAddr, 0x8), 10) { Name = "thread" });
+	vars.watcherList.Add(new StringWatcher(new DeepPointer(missionTextAddr), 16) { Name = "missionStartText" });
 
 	// Add other non-SCM addresses (eg stats entries) as added in startup()
 	foreach (var tuple in vars.nonScmAddresses) {
@@ -5035,14 +5056,14 @@ init {
 
 		switch (tupleType) {
 			case 1:
-				vars.watchers.Add(
+				vars.watcherList.Add(
 					new MemoryWatcher<byte>(
 						new DeepPointer(tupleAddress+offset)
 					) { Name = tupleName }
 				);
 				break;
 			case 2:
-				vars.watchers.Add(
+				vars.watcherList.Add(
 					new MemoryWatcher<short>(
 						new DeepPointer(tupleAddress+offset)
 					) { Name = tupleName }
@@ -5050,7 +5071,7 @@ init {
 				break;
 			case 4:
 			default:
-				vars.watchers.Add(
+				vars.watcherList.Add(
 					new MemoryWatcher<int>(
 						new DeepPointer(tupleAddress+offset)
 					) { Name = tupleName }
@@ -5067,18 +5088,18 @@ init {
 
 		switch (tupleType) {
 			case 1:
-				vars.watchers.Add(
+				vars.watcherList.Add(
 					new MemoryWatcher<byte>(tuplePointer) { Name = tupleName }
 				);
 				break;
 			case 2:
-				vars.watchers.Add(
+				vars.watcherList.Add(
 					new MemoryWatcher<short>(tuplePointer) { Name = tupleName }
 				);
 				break;
 			case 4:
 			default:
-				vars.watchers.Add(
+				vars.watcherList.Add(
 					new MemoryWatcher<int>(tuplePointer) { Name = tupleName }
 				);
 				break;
@@ -5090,7 +5111,7 @@ init {
 	foreach (var item in vars.watchScmGlobalVariables) {
 		var address = item.Key*4+scmGlobVarOffset+offset;
 		vars.DebugOutput("Adding watcher (scmG): 0x" + address.ToString("x") + " $" + item.Key.ToString() + " " + item.Value);
-		vars.watchers.Add(
+		vars.watcherList.Add(
 			new MemoryWatcher<int>(
 				new DeepPointer(address)
 			) { Name = item.Value.ToString() }
@@ -5103,7 +5124,7 @@ init {
 	foreach (var item in vars.watchScmMissionLocalVariables) {
 		var address = item*4+scmMissionLocalVarOffset+offset;
 		vars.DebugOutput("Adding watcher (scmL): 0x" + address.ToString("x") + " ScmLocal @" + item);
-		vars.watchers.Add(
+		vars.watcherList.Add(
 			new MemoryWatcher<int>(
 				new DeepPointer(address)
 			) { Name = item.ToString() + "@" }
@@ -5156,6 +5177,37 @@ init {
 	};
 	vars.TrySplit = TrySplit;
 
+	// Function that's done when checking subsplits for each mission
+	// Checks if the mission is or was recently active
+	// Then checks if the mission has been passed, and splits if so
+	// If the mission is both active and not passed, returns true
+	// Also checks if the mission is enabled in the settings to begin with
+	Func<string, string, int, int, string, string, bool> ValidateMissionProgress = (thread, chain, currentIndex, passIndex, split, setting) => {
+		if (!settings[setting]) {
+			return false;
+		}
+		if (vars.lastStartedMission != thread) {
+			return false;
+		}
+		var mission_chain = vars.GetWatcher(chain);
+		if (mission_chain.Current >= passIndex) {
+			if (mission_chain.Changed && mission_chain.Old == currentIndex) {
+				vars.TrySplit(split);
+				return false;
+			}
+			return false;
+		}
+		return true;
+	};
+	vars.ValidateMissionProgress = ValidateMissionProgress;
+
+	// Check if a setting is enabled. Have to do it like this because checking directly in the 
+	// startup Funcs throws an error
+	Func<string, bool> CheckSetting = (name) => {
+		return settings[name];
+	};
+	vars.CheckSetting = CheckSetting;
+
 	return;
 
 
@@ -5188,79 +5240,79 @@ init {
 
 
 	// Add global variables for mid-mission events
-	vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(6592864 + (802 * 4)+offset)) { Name = "100%_achieved" }); // $_100_PERCENT_COMPLETE
-	vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(6592864 + (7011 * 4)+offset)) { Name = "aygtsf_plantsremaining" });
-	vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(6592864 + (2208 * 4)+offset)) { Name = "bl_cabinreached" });	// Trip Skip enabled
-	vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(6592864 + (6965 * 4)+offset)) { Name = "bl_stage" });
-	vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(6592864 + (64 * 4)+offset)) { Name = "catalina_count" }); // CATALINA_TOTAL_PASSED_MISSIONS
-	vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(6592864 + (1799 * 4)+offset)) { Name = "chilliad_race" });
-	vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(6592864 + (1801 * 4)+offset)) { Name = "chilliad_done" }); // $MISSION_CHILIAD_CHALLENGE_PASSED
-	vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(6592864 + (8014 * 4)+offset)) { Name = "eotlp3_chase" });
-	vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(6592864 + (359 * 4)+offset)) { Name = "gf_denise_progress" }); // $GIRL_PROGRESS[0]
-	vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(6592864 + (360 * 4)+offset)) { Name = "gf_michelle_progress" }); // $GIRL_PROGRESS[1]
-	vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(6592864 + (361 * 4)+offset)) { Name = "gf_helena_progress" }); // $GIRL_PROGRESS[2]
-	vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(6592864 + (362 * 4)+offset)) { Name = "gf_barbara_progress" }); // $GIRL_PROGRESS[3]
-	vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(6592864 + (363 * 4)+offset)) { Name = "gf_katie_progress" }); // $GIRL_PROGRESS[4]
-	vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(6592864 + (364 * 4)+offset)) { Name = "gf_millie_progress" }); // $GIRL_PROGRESS[5]
-	vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(6592864 + (406 * 4)+offset)) { Name = "gf_unlocked" }); // $GIRLS_GIFTS_BITMASK
-	vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(6592864 + (8250 * 4)+offset)) { Name = "kickstart_checkpoints" });
-	vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(6592864 + (8262 * 4)+offset)) { Name = "kickstart_points" });
-	vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(6592864 + (10933 * 4)+offset)) { Name = "valet_carstopark" });
-	vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(6592864 + (1848 * 4)+offset)) { Name = "valet_carsparked" });
-	vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(6592864 + (247 * 4)+offset)) { Name = "schools_currentexercise" });
-	vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(6592864 + (726 * 4)+offset)) { Name = "stunt_type" }); // $STUNT_MISSION_TYPE
-	vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(6592864 + (8267 * 4)+offset)) { Name = "stunt_timer" });
-	// vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(6592864 + (1883 * 4)+offset)) { Name = "valet_started" }); // Gets set during 555 we tip, could be useful to track its progress
+	vars.watcherList.Add(new MemoryWatcher<int>(new DeepPointer(6592864 + (802 * 4)+offset)) { Name = "100%_achieved" }); // $_100_PERCENT_COMPLETE
+	vars.watcherList.Add(new MemoryWatcher<int>(new DeepPointer(6592864 + (7011 * 4)+offset)) { Name = "aygtsf_plantsremaining" });
+	vars.watcherList.Add(new MemoryWatcher<int>(new DeepPointer(6592864 + (2208 * 4)+offset)) { Name = "bl_cabinreached" });	// Trip Skip enabled
+	vars.watcherList.Add(new MemoryWatcher<int>(new DeepPointer(6592864 + (6965 * 4)+offset)) { Name = "bl_stage" });
+	vars.watcherList.Add(new MemoryWatcher<int>(new DeepPointer(6592864 + (64 * 4)+offset)) { Name = "catalina_count" }); // CATALINA_TOTAL_PASSED_MISSIONS
+	vars.watcherList.Add(new MemoryWatcher<int>(new DeepPointer(6592864 + (1799 * 4)+offset)) { Name = "chilliad_race" });
+	vars.watcherList.Add(new MemoryWatcher<int>(new DeepPointer(6592864 + (1801 * 4)+offset)) { Name = "chilliad_done" }); // $MISSION_CHILIAD_CHALLENGE_PASSED
+	vars.watcherList.Add(new MemoryWatcher<int>(new DeepPointer(6592864 + (8014 * 4)+offset)) { Name = "eotlp3_chase" });
+	vars.watcherList.Add(new MemoryWatcher<int>(new DeepPointer(6592864 + (359 * 4)+offset)) { Name = "gf_denise_progress" }); // $GIRL_PROGRESS[0]
+	vars.watcherList.Add(new MemoryWatcher<int>(new DeepPointer(6592864 + (360 * 4)+offset)) { Name = "gf_michelle_progress" }); // $GIRL_PROGRESS[1]
+	vars.watcherList.Add(new MemoryWatcher<int>(new DeepPointer(6592864 + (361 * 4)+offset)) { Name = "gf_helena_progress" }); // $GIRL_PROGRESS[2]
+	vars.watcherList.Add(new MemoryWatcher<int>(new DeepPointer(6592864 + (362 * 4)+offset)) { Name = "gf_barbara_progress" }); // $GIRL_PROGRESS[3]
+	vars.watcherList.Add(new MemoryWatcher<int>(new DeepPointer(6592864 + (363 * 4)+offset)) { Name = "gf_katie_progress" }); // $GIRL_PROGRESS[4]
+	vars.watcherList.Add(new MemoryWatcher<int>(new DeepPointer(6592864 + (364 * 4)+offset)) { Name = "gf_millie_progress" }); // $GIRL_PROGRESS[5]
+	vars.watcherList.Add(new MemoryWatcher<int>(new DeepPointer(6592864 + (406 * 4)+offset)) { Name = "gf_unlocked" }); // $GIRLS_GIFTS_BITMASK
+	vars.watcherList.Add(new MemoryWatcher<int>(new DeepPointer(6592864 + (8250 * 4)+offset)) { Name = "kickstart_checkpoints" });
+	vars.watcherList.Add(new MemoryWatcher<int>(new DeepPointer(6592864 + (8262 * 4)+offset)) { Name = "kickstart_points" });
+	vars.watcherList.Add(new MemoryWatcher<int>(new DeepPointer(6592864 + (10933 * 4)+offset)) { Name = "valet_carstopark" });
+	vars.watcherList.Add(new MemoryWatcher<int>(new DeepPointer(6592864 + (1848 * 4)+offset)) { Name = "valet_carsparked" });
+	vars.watcherList.Add(new MemoryWatcher<int>(new DeepPointer(6592864 + (247 * 4)+offset)) { Name = "schools_currentexercise" });
+	vars.watcherList.Add(new MemoryWatcher<int>(new DeepPointer(6592864 + (726 * 4)+offset)) { Name = "stunt_type" }); // $STUNT_MISSION_TYPE
+	vars.watcherList.Add(new MemoryWatcher<int>(new DeepPointer(6592864 + (8267 * 4)+offset)) { Name = "stunt_timer" });
+	// vars.watcherList.Add(new MemoryWatcher<int>(new DeepPointer(6592864 + (1883 * 4)+offset)) { Name = "valet_started" }); // Gets set during 555 we tip, could be useful to track its progress
 
 	// Local variables. These are used across multiple missions and it's hard to tell which without just testing it
-	vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(0x55EE68+offset)) { Name = "ctb_checkpoint1" });
-	vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(0x57F10C+offset)) { Name = "ctb_checkpoint2" });
+	vars.watcherList.Add(new MemoryWatcher<int>(new DeepPointer(0x55EE68+offset)) { Name = "ctb_checkpoint1" });
+	vars.watcherList.Add(new MemoryWatcher<int>(new DeepPointer(0x57F10C+offset)) { Name = "ctb_checkpoint2" });
 
-	vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(0x648A00+offset)) { Name = "r_dialogueBlock" }); // 40@
-	vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(0x648A10+offset)) { Name = "gym_fighting" }); // 44@
-	vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(0x648A38+offset)) { Name = "g4l_territory2" }); // 54@
-	vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(0x648A40+offset)) { Name = "g4l_drivetoidlewood" }); // 56@
-	vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(0x648A48+offset)) { Name = "g4l_territory1" }); // 58@
-	vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(0x648A4C+offset)) { Name = "stunt_checkpoint" }); //59@
-	vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(0x648ABC+offset)) { Name = "aygtsf_progress" }); //87@
-	vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(0x648AC8+offset)) { Name = "aao_finalmarker" }); //90@
-	vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(0x648AE8+offset)) { Name = "aao_storeleft" }); //98@
-	vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(0x648AF0+offset)) { Name = "tgs_chapter" }); //100@
-	vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(0x648B08+offset)) { Name = "trucking_leftcompound" });
-	vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(0x648B10+offset)) { Name = "aao_angryshouts" }); //108@
-	vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(0x648B68+offset)) { Name = "freight_stations" });
-	vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(0x648BBC+offset)) { Name = "aygtsf_dialogue" }); //151@
-	vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(0x648D74+offset)) { Name = "lossep_homiesrecruited" });
-	vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(0x648DD8+offset)) { Name = "lossep_cardoorsunlocked" });
-	vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(0x6491B8+offset)) { Name = "lossep_dialogue" });
-	vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(0x64950C+offset)) { Name = "chilliad_checkpoints3" });
-	vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(0x649518+offset)) { Name = "chilliad_checkpoints" });
+	vars.watcherList.Add(new MemoryWatcher<int>(new DeepPointer(0x648A00+offset)) { Name = "r_dialogueBlock" }); // 40@
+	vars.watcherList.Add(new MemoryWatcher<int>(new DeepPointer(0x648A10+offset)) { Name = "gym_fighting" }); // 44@
+	vars.watcherList.Add(new MemoryWatcher<int>(new DeepPointer(0x648A38+offset)) { Name = "g4l_territory2" }); // 54@
+	vars.watcherList.Add(new MemoryWatcher<int>(new DeepPointer(0x648A40+offset)) { Name = "g4l_drivetoidlewood" }); // 56@
+	vars.watcherList.Add(new MemoryWatcher<int>(new DeepPointer(0x648A48+offset)) { Name = "g4l_territory1" }); // 58@
+	vars.watcherList.Add(new MemoryWatcher<int>(new DeepPointer(0x648A4C+offset)) { Name = "stunt_checkpoint" }); //59@
+	vars.watcherList.Add(new MemoryWatcher<int>(new DeepPointer(0x648ABC+offset)) { Name = "aygtsf_progress" }); //87@
+	vars.watcherList.Add(new MemoryWatcher<int>(new DeepPointer(0x648AC8+offset)) { Name = "aao_finalmarker" }); //90@
+	vars.watcherList.Add(new MemoryWatcher<int>(new DeepPointer(0x648AE8+offset)) { Name = "aao_storeleft" }); //98@
+	vars.watcherList.Add(new MemoryWatcher<int>(new DeepPointer(0x648AF0+offset)) { Name = "tgs_chapter" }); //100@
+	vars.watcherList.Add(new MemoryWatcher<int>(new DeepPointer(0x648B08+offset)) { Name = "trucking_leftcompound" });
+	vars.watcherList.Add(new MemoryWatcher<int>(new DeepPointer(0x648B10+offset)) { Name = "aao_angryshouts" }); //108@
+	vars.watcherList.Add(new MemoryWatcher<int>(new DeepPointer(0x648B68+offset)) { Name = "freight_stations" });
+	vars.watcherList.Add(new MemoryWatcher<int>(new DeepPointer(0x648BBC+offset)) { Name = "aygtsf_dialogue" }); //151@
+	vars.watcherList.Add(new MemoryWatcher<int>(new DeepPointer(0x648D74+offset)) { Name = "lossep_homiesrecruited" });
+	vars.watcherList.Add(new MemoryWatcher<int>(new DeepPointer(0x648DD8+offset)) { Name = "lossep_cardoorsunlocked" });
+	vars.watcherList.Add(new MemoryWatcher<int>(new DeepPointer(0x6491B8+offset)) { Name = "lossep_dialogue" });
+	vars.watcherList.Add(new MemoryWatcher<int>(new DeepPointer(0x64950C+offset)) { Name = "chilliad_checkpoints3" });
+	vars.watcherList.Add(new MemoryWatcher<int>(new DeepPointer(0x649518+offset)) { Name = "chilliad_checkpoints" });
 
 	// Things
-    vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(0x7791D0+offset)) { Name = "gang_territories" });
+    vars.watcherList.Add(new MemoryWatcher<int>(new DeepPointer(0x7791D0+offset)) { Name = "gang_territories" });
 
 	// Values not mission specific
-	vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(0x7AA420+offset)) { Name = "wanted_level" });
+	vars.watcherList.Add(new MemoryWatcher<int>(new DeepPointer(0x7AA420+offset)) { Name = "wanted_level" });
 
 	// Values not mission specific, global from SCM ($xxxx)
-	vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(6592864 + (43 * 4)+offset)) { Name = "interior" });
+	vars.watcherList.Add(new MemoryWatcher<int>(new DeepPointer(6592864 + (43 * 4)+offset)) { Name = "interior" });
 
 	// This means loading from a save and such, not load screens
-	vars.watchers.Add(new MemoryWatcher<bool>(new DeepPointer(loadingAddr)) { Name = "loading" });
+	vars.watcherList.Add(new MemoryWatcher<bool>(new DeepPointer(loadingAddr)) { Name = "loading" });
 
 	// Other values
-	vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(playerPedAddr, 0x530)) { Name = "pedStatus" });
+	vars.watcherList.Add(new MemoryWatcher<int>(new DeepPointer(playerPedAddr, 0x530)) { Name = "pedStatus" });
 
 	// Export Lists
 	//=============
 
-	// vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(0x64A9C4+offset)) { Name = "exportList" });
+	// vars.watcherList.Add(new MemoryWatcher<int>(new DeepPointer(0x64A9C4+offset)) { Name = "exportList" });
 	var exportBaseAddr = 0x64A9F0+offset;
 	for (int i = 0; i < 10; i++)
 	{
 		var address = exportBaseAddr + i*4;
 		//print(address.ToString("X"));
-		vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(address)) { Name = "export"+i });
+		vars.watcherList.Add(new MemoryWatcher<int>(new DeepPointer(address)) { Name = "export"+i });
 	}
 
 
@@ -5281,7 +5333,8 @@ update {
 
 	// Update always, to prevent splitting after loading (if possible, doesn't seem to be 100% reliable)
 	// The number of watchers has increased too much this is no longer efficient.
-	vars.watchers.UpdateAll(game);
+	// vars.watcherList.UpdateAll(game);
+	vars.currentWatchers.Clear();
 }
 
 onReset {
@@ -5298,11 +5351,11 @@ split {
 		//=============================================================================
 		// Split prevention
 		//=============================================================================
-		var playingTime = vars.watchers["playingTime"];
-		var intro_newGameStarted = vars.watchers["intro_newGameStarted"];
-		var intro_passed = vars.watchers["intro_passed"];
+		var playingTime = vars.GetWatcher("playingTime");
+		var intro_newGameStarted = vars.GetWatcher("intro_newGameStarted");
+		var intro_passed = vars.GetWatcher("intro_passed");
 
-		// if (vars.watchers["loading"].Current) {
+		// if (vars.GetWatcher("loading"].Current) {
 		// 	vars.DebugOutput("Loading");
 		// 	vars.lastLoad = Environment.TickCount;
 		// 	return false;
@@ -5344,7 +5397,7 @@ split {
 	//
 	// Dump started mission to a var, used for mid-mission checks later. Don't
 	// move this down. If applicable, also splits for the thread being started.
-	var thread = vars.watchers["thread"];
+	var thread = vars.GetWatcher("thread");
 	if (thread.Changed) {
 		if (vars.lastStartedMission != thread.Current) {
 			if (vars.significantThreads.ContainsKey(thread.Current)) {
@@ -5360,7 +5413,7 @@ split {
 	// Marker entry
 	// ============
 	// This checks whether the yellow string shown in the bottom right matches a mission name
-	var missionStartText = vars.watchers["missionStartText"];
+	var missionStartText = vars.GetWatcher("missionStartText");
 	if (missionStartText.Changed) {
 		var mst = missionStartText.Current;
 		if (!string.IsNullOrEmpty(mst) && vars.missionNames.ContainsKey(mst)) {
@@ -5417,7 +5470,7 @@ split {
 		// Splits
 		//=============================================================================
 
-		var interior = vars.watchers["interior"];
+		var interior = vars.GetWatcher("interior");
 		var interiorChanged = interior.Current != interior.Old;
 		// Mid-Mission Events
 		//===================
@@ -5437,10 +5490,10 @@ split {
 		// 5: Boom
 		// 6: Now do the safe
 		if (vars.lastStartedMission == "cat4") {
-			var aao_angryshouts = vars.watchers["aao_angryshouts"];
-			var aao_storeleft = vars.watchers["aao_storeleft"];
-			var aao_finalmarker = vars.watchers["aao_finalmarker"];
-			var aao_wantedlevel = vars.watchers["wanted_level"];
+			var aao_angryshouts = vars.GetWatcher("aao_angryshouts");
+			var aao_storeleft = vars.GetWatcher("aao_storeleft");
+			var aao_finalmarker = vars.GetWatcher("aao_finalmarker");
+			var aao_wantedlevel = vars.GetWatcher("wanted_level");
 			if (aao_angryshouts.Old == 0 && aao_angryshouts.Current == 1) { vars.TrySplit("AAO: Robbery Cutscene Ended");}
 			else if (aao_angryshouts.Old == 2 && aao_angryshouts.Current == 3) { vars.TrySplit("AAO: Door Satchel Placed");}
 			else if (aao_angryshouts.Old == 4 && aao_angryshouts.Current == 5) { vars.TrySplit("AAO: Door Blown");}
@@ -5462,18 +5515,18 @@ split {
 		//==================================
 		// aygtsf_progress reaches 1 when all plants are destroyed. Redundant because we're already counting the plants
 		if (vars.lastStartedMission == "truth2") {
-			var aygtsf_plantsremaining = vars.watchers["aygtsf_plantsremaining"];
+			var aygtsf_plantsremaining = vars.GetWatcher("aygtsf_plantsremaining");
 			if (aygtsf_plantsremaining.Current != aygtsf_plantsremaining.Old && aygtsf_plantsremaining.Current != 44) {
 				for (int i = aygtsf_plantsremaining.Old; i > aygtsf_plantsremaining.Current; i--) {
 					var aygtsf_plants = 45 - i;
 					vars.TrySplit("AYGTSF: " + aygtsf_plants + " Plants Destroyed");
 				}
 			}
-			var aygtsf_dialogue = vars.watchers["aygtsf_dialogue"];
+			var aygtsf_dialogue = vars.GetWatcher("aygtsf_dialogue");
 			if (aygtsf_dialogue.Current == 8 && aygtsf_dialogue.Old != 8) {
 				vars.TrySplit("AYGTSF: Rocket Launcher");
 			}
-			var aygtsf_progress = vars.watchers["aygtsf_progress"];
+			var aygtsf_progress = vars.GetWatcher("aygtsf_progress");
 			if (aygtsf_progress.Current == 2 && aygtsf_progress.Old < 2) {
 				vars.TrySplit("AYGTSF: Helicopter Destroyed");
 			}
@@ -5500,8 +5553,8 @@ split {
 		// 7: reporter dead
 		// 8: photograph taken, return
 		if (vars.lastStartedMission == "bcrash1") {
-			var badlands_progress = vars.watchers["bl_stage"];
-			var badlands_tripskip = vars.watchers["bl_cabinreached"];
+			var badlands_progress = vars.GetWatcher("bl_stage");
+			var badlands_tripskip = vars.GetWatcher("bl_cabinreached");
 			if (badlands_tripskip.Current == 1 && badlands_tripskip.Old == 0) {
 				vars.TrySplit("Badlands: Cabin Reached");
 			}
@@ -5513,7 +5566,7 @@ split {
 	#endregion
 	#region Catalina Quadrilogy
 		if (thread.Changed && thread.Current == "catalin") {
-			var catalina_count = vars.watchers["catalina_count"];
+			var catalina_count = vars.GetWatcher("catalina_count");
 			if (catalina_count.Current == 0) { vars.TrySplit("First Date Started");}
 			else if (catalina_count.Current == 1) { vars.TrySplit("First Base Started");}
 			else if (catalina_count.Current == 2) { vars.TrySplit("Gone Courting Started");}
@@ -5527,12 +5580,12 @@ split {
 		// "chilliad_done" changes from 0 to 1 when all races have been done.
 		// current race gets set before current checkpoint. This causes a glitch where finishing race 1 will also trigger CP 18 of race 2.
 		// Using else if instead of just if seems to remedy this.
-		var chilliad_race = vars.watchers["chilliad_race"];
+		var chilliad_race = vars.GetWatcher("chilliad_race");
 		if (thread.Changed && thread.Current == "mtbiker") {
 			vars.TrySplit("Chilliad Challenge #"+chilliad_race.Current+" Started");
 		}
-		var chilliad_checkpoints = vars.watchers["chilliad_checkpoints"];
-		var chilliad_checkpoints3 = vars.watchers["chilliad_checkpoints3"];
+		var chilliad_checkpoints = vars.GetWatcher("chilliad_checkpoints");
+		var chilliad_checkpoints3 = vars.GetWatcher("chilliad_checkpoints3");
 		if (chilliad_race.Current != chilliad_race.Old) {
 			vars.TrySplit("Chilliad Challenge #"+chilliad_race.Old+" Complete");
 		}
@@ -5553,8 +5606,8 @@ split {
 		// Courier_city is set to 0 for an extra frame, which is meaningless. So we want to check it first
 		// and only then check if it got changed because of a courier start. Honestly just using the start
 		// threads monitor would be easier, but we need to watch these variables anyway.
-		var courier_active = vars.watchers["courier_active"];
-		var courier_city = vars.watchers["courier_city"];
+		var courier_active = vars.GetWatcher("courier_active");
+		var courier_city = vars.GetWatcher("courier_city");
 		if (courier_city.Current != courier_city.Old) {
 			if (courier_city.Current != 0 && courier_active.Current == 1) {
 				vars.TrySplit("courier_"+courier_city.Current+"_started");
@@ -5565,11 +5618,11 @@ split {
 			if (courier_city.Current == 2) courier_cityname = "sf";
 			if (courier_city.Current == 3) courier_cityname = "lv";
 
-			var courier_levels = vars.watchers["courier"+courier_cityname+"_levels"];
+			var courier_levels = vars.GetWatcher("courier"+courier_cityname+"_levels");
 			if (courier_levels.Current > courier_levels.Old) {
 				vars.TrySplit("courier_" + courier_city.Current + "_level_" + (courier_levels.Current));
 			}
-			var courier_checkpoints = vars.watchers["courier_checkpoints"];
+			var courier_checkpoints = vars.GetWatcher("courier_checkpoints");
 			if (courier_checkpoints.Current > courier_checkpoints.Old) {
 				vars.TrySplit("courier_" + courier_city.Current + "_level_" + (courier_levels.Current+1) + "_delivery_" + courier_checkpoints.Current);
 			}
@@ -5577,13 +5630,13 @@ split {
 	#endregion
 	#region Cut Throat Business
 		//=========================
-		var ctb_checkpoint1 = vars.watchers["ctb_checkpoint1"];
+		var ctb_checkpoint1 = vars.GetWatcher("ctb_checkpoint1");
 		if (ctb_checkpoint1.Current > ctb_checkpoint1.Old && ctb_checkpoint1.Old == 0) {
 			if (vars.lastStartedMission == "manson5" && !vars.Passed("Cut Throat Business")) {
 				vars.TrySplit("ctb_checkpoint1");
 			}
 		}
-		var ctb_checkpoint2 = vars.watchers["ctb_checkpoint2"];
+		var ctb_checkpoint2 = vars.GetWatcher("ctb_checkpoint2");
 		if (ctb_checkpoint2.Current > ctb_checkpoint2.Old && ctb_checkpoint2.Old == 0) {
 			if (vars.lastStartedMission == "manson5" && !vars.Passed("Cut Throat Business")) {
 				vars.TrySplit("ctb_checkpoint2");
@@ -5593,7 +5646,7 @@ split {
 	#region End of the Line
 		//================
 		// Any% ending point + other cutscenes
-		var eotlp3_chase = vars.watchers["eotlp3_chase"];
+		var eotlp3_chase = vars.GetWatcher("eotlp3_chase");
 		if (eotlp3_chase.Current > eotlp3_chase.Old) {
 			if (vars.Passed("End of the Line Part 2")) {
 				vars.TrySplit("eotlp3_chase" + eotlp3_chase.Current.ToString());
@@ -5604,7 +5657,7 @@ split {
 		//========
 		// Split on each train station, except for the 5th one, which is the last one
 		// causing level completion which will split already anyway.
-		var freight_stations = vars.watchers["freight_stations"];
+		var freight_stations = vars.GetWatcher("freight_stations");
 		if (freight_stations.Current > freight_stations.Old && freight_stations.Current < 5) {
 			// Do a check we're actually on Freight, since this is a local variable used for multiple missions
 			if (vars.lastStartedMission == "freight") {
@@ -5619,9 +5672,9 @@ split {
 	#endregion
 	#region Grove 4 Life
 		//==================
-		var g4l_drivetoidlewood = vars.watchers["g4l_drivetoidlewood"];
-		var g4l_territory1 = vars.watchers["g4l_territory1"];
-		var g4l_territory2 = vars.watchers["g4l_territory2"];
+		var g4l_drivetoidlewood = vars.GetWatcher("g4l_drivetoidlewood");
+		var g4l_territory1 = vars.GetWatcher("g4l_territory1");
+		var g4l_territory2 = vars.GetWatcher("g4l_territory2");
 		if (g4l_drivetoidlewood.Current > g4l_drivetoidlewood.Old && g4l_drivetoidlewood.Old == 0) {
 			if (vars.lastStartedMission == "grove2" && !vars.Passed("Grove 4 Life")) {
 				vars.TrySplit("g4l_drivetoidlewood");
@@ -5641,19 +5694,19 @@ split {
 	#region Gym Moves
 		//===============
 		if (vars.lastStartedMission == "gymsf") {
-			var gym_start = vars.watchers["gym_fighting"];
+			var gym_start = vars.GetWatcher("gym_fighting");
 			if (gym_start.Current > gym_start.Old && gym_start.Current == 1) {
 				vars.TrySplit("San Fierro Gym Fight Start");
 			}
 		}
 		else if (vars.lastStartedMission == "gymls") {
-			var gym_start = vars.watchers["gym_fighting"];
+			var gym_start = vars.GetWatcher("gym_fighting");
 			if (gym_start.Current > gym_start.Old && gym_start.Current == 1) {
 				vars.TrySplit("Los Santos Gym Fight Start");
 			}
 		}
 		else if (vars.lastStartedMission == "gymlv") {
-			var gym_start = vars.watchers["gym_fighting"];
+			var gym_start = vars.GetWatcher("gym_fighting");
 			if (gym_start.Current > gym_start.Old && gym_start.Current == 1) {
 				vars.TrySplit("Las Venturas Gym Fight Start");
 			}
@@ -5670,7 +5723,7 @@ split {
 		for (int i = 0; i < 10; i++)
 		{
 			// Check if this vehicle has just been exported
-			var vehicle = vars.watchers["export"+i];
+			var vehicle = vars.GetWatcher("export"+i);
 			bool shouldSplit = false;
 			int vehicleId = i;
 			var exportList = 0;
@@ -5715,8 +5768,8 @@ split {
 	#endregion
 	#region Kickstart
 		//===============
-		var kickstart_checkpoints = vars.watchers["kickstart_checkpoints"];
-		var kickstart_points = vars.watchers["kickstart_points"];
+		var kickstart_checkpoints = vars.GetWatcher("kickstart_checkpoints");
+		var kickstart_points = vars.GetWatcher("kickstart_points");
 		if (kickstart_checkpoints.Current > kickstart_checkpoints.Old) {
 			vars.TrySplit("Kickstart Checkpoint "+kickstart_checkpoints.Current);
 		}
@@ -5743,9 +5796,9 @@ split {
 		// 	71 = Everybody go home, we aint seen each other all day. Copy?
 		// 	72 = I'll catch you later CJ
 		if (vars.lastStartedMission == "sweet7") {
-			var lossep_homiesrecruited = vars.watchers["lossep_homiesrecruited"];
-			var lossep_cardoorsunlocked = vars.watchers["lossep_cardoorsunlocked"];
-			var lossep_dialogue = vars.watchers["lossep_dialogue"];
+			var lossep_homiesrecruited = vars.GetWatcher("lossep_homiesrecruited");
+			var lossep_cardoorsunlocked = vars.GetWatcher("lossep_cardoorsunlocked");
+			var lossep_dialogue = vars.GetWatcher("lossep_dialogue");
 			if (lossep_homiesrecruited.Old == 0 && lossep_homiesrecruited.Current == 1) {
 				vars.TrySplit("Los Sepulcros: One Homie Recruited");
 			}
@@ -5783,11 +5836,11 @@ split {
 		//===========
 		// Split for each checkpoint
 		// which variable is your cp count depends on the number of opponents in the races.
-		var race_index = vars.watchers["race_index"];
+		var race_index = vars.GetWatcher("race_index");
 		if (vars.lastStartedMission == "cprace" || vars.lastStartedMission == "bcesar4" || vars.lastStartedMission == "cesar1") {
 			if (race_index.Current == 7 || race_index.Current == 8) {
 				// Badlands A & B
-				var races_badlandscheckpoint = vars.watchers["races_badlandscheckpoint"];
+				var races_badlandscheckpoint = vars.GetWatcher("races_badlandscheckpoint");
 				if (races_badlandscheckpoint.Current > races_badlandscheckpoint.Old) {
 					var splitName = "Race "+race_index.Current+" Checkpoint "+races_badlandscheckpoint.Old;
 					vars.TrySplit(splitName);
@@ -5795,7 +5848,7 @@ split {
 			}
 			else if (race_index.Current < 19) {
 				// Normal races
-				var races_checkpoint = vars.watchers["races_checkpoint"];
+				var races_checkpoint = vars.GetWatcher("races_checkpoint");
 				if (races_checkpoint.Current > races_checkpoint.Old) {
 					var splitName = "Race "+race_index.Current+" Checkpoint "+races_checkpoint.Old;
 					vars.TrySplit(splitName);
@@ -5803,7 +5856,7 @@ split {
 			}
 			else if (race_index.Current < 25) {
 				// Fly races
-				var races_flycheckpoint = vars.watchers["races_flycheckpoint"];
+				var races_flycheckpoint = vars.GetWatcher("races_flycheckpoint");
 				if (races_flycheckpoint.Current > races_flycheckpoint.Old) {
 					var splitName = "Race "+race_index.Current+" Checkpoint "+races_flycheckpoint.Old;
 					vars.TrySplit(splitName);
@@ -5811,8 +5864,8 @@ split {
 			}
 			else {
 				// Stadium races
-				var races_stadiumcheckpoint = vars.watchers["races_stadiumcheckpoint"];
-				var races_laps = vars.watchers["races_laps"];
+				var races_stadiumcheckpoint = vars.GetWatcher("races_stadiumcheckpoint");
+				var races_laps = vars.GetWatcher("races_laps");
 				// Invisible intralap checkpoints in stadium races
 				if (races_stadiumcheckpoint.Current > races_stadiumcheckpoint.Old) {
 					var splitName = "Race "+race_index.Current+" Lap "+races_laps.Current+" Checkpoint "+races_stadiumcheckpoint.Old;
@@ -5829,7 +5882,7 @@ split {
 	#region Schools
 		//========
 		// Current exercise is used by driving and boat school
-		var schools_currentexercise = vars.watchers["schools_currentexercise"];
+		var schools_currentexercise = vars.GetWatcher("schools_currentexercise");
 		if (schools_currentexercise.Current > schools_currentexercise.Old) {
 			if (vars.lastStartedMission == "dskool" && !vars.Passed("Driving School")) {
 				if (schools_currentexercise.Old == 1) { vars.TrySplit("The 360 (Driving School)"); }
@@ -5859,10 +5912,10 @@ split {
 		//================================
 		// $8267 is the timer for the mission. At the start of a mission it gets set to the ingame time
 		// and stays there for the duration of the cutscene. It is only used on these missions.
-		var stunt_timer = vars.watchers["stunt_timer"];
+		var stunt_timer = vars.GetWatcher("stunt_timer");
 		if (stunt_timer.Current > stunt_timer.Old + 10001) {
 			if (vars.lastStartedMission == "stunt") {
-				var stunt_type = vars.watchers["stunt_type"].Current;
+				var stunt_type = vars.GetWatcher("stunt_type").Current;
 				var name = "BMX Stunt";
 				if (stunt_type == 1) { name = "NRG Stunt"; }
 				vars.TrySplit(name + "0");
@@ -5876,10 +5929,10 @@ split {
 				}
 			}
 		}
-		var stunt_checkpoint = vars.watchers["stunt_checkpoint"];
+		var stunt_checkpoint = vars.GetWatcher("stunt_checkpoint");
 		if (stunt_checkpoint.Current > stunt_checkpoint.Old) {
 			if (vars.lastStartedMission == "stunt") {
-				var stunt_type = vars.watchers["stunt_type"].Current;
+				var stunt_type = vars.GetWatcher("stunt_type").Current;
 				var name = "BMX Stunt";
 				if (stunt_type == 1) { name = "NRG Stunt"; }
 				vars.TrySplit(name + stunt_checkpoint.Current);
@@ -5896,7 +5949,7 @@ split {
 		// 6 = Combat
 		// 7 = Cops arrive at the parking lot
 		// 8 = You got a bag over your head boy
-		var tgs_chapter = vars.watchers["tgs_chapter"];
+		var tgs_chapter = vars.GetWatcher("tgs_chapter");
 		if (tgs_chapter.Current > tgs_chapter.Old) {
 			if (vars.lastStartedMission == "la1fin2" && !vars.Passed("The Green Sabre")) {
 				switch ((int)tgs_chapter.Current) {
@@ -5930,13 +5983,13 @@ split {
 	#region Trucking
 		//=========
 		// Start & Leaving the compound
-		// var trucking_current = vars.watchers[0x6518DC.ToString()].Current + 1;
+		// var trucking_current = vars.GetWatcher(0x6518DC.ToString()].Current + 1;
 		// if (thread.Changed && thread.Current == "truck") {
 		// 	var splitName = "Trucking "+trucking_current+" Started";
 		// 	vars.TrySplit(splitName);
 		// }
 		// else if (vars.lastStartedMission == "truck") {
-		// 	var trucking_leftcompound = vars.watchers["trucking_leftcompound"];
+		// 	var trucking_leftcompound = vars.GetWatcher("trucking_leftcompound");
 		// 	if (trucking_leftcompound.Current > trucking_leftcompound.Old) {
 		// 		var splitName = "Trucking "+trucking_current+": Left Compound";
 		// 		vars.TrySplit(splitName);
@@ -5946,15 +5999,15 @@ split {
 	#region Valet Parking
 		//===================
 		// Levels
-		// var valet_level = vars.watchers["valet_level"];
+		// var valet_level = vars.GetWatcher("valet_level");
 		// if (valet_level.Current > valet_level.Old && valet_level.Old != 0) {
 		// 	if (thread.Current == "valet") {
 		// 		var splitName = "valet_level" + valet_level.Old;
 		// 		vars.TrySplit(splitName);
 		// 	}
 		// }
-		var valet_carstopark = vars.watchers["valet_carstopark"];
-		var valet_carsparked = vars.watchers["valet_carsparked"];
+		var valet_carstopark = vars.GetWatcher("valet_carstopark");
+		var valet_carsparked = vars.GetWatcher("valet_carsparked");
 		// if (thread.Current == "valet") {
 			if (valet_carstopark.Old == 0 && valet_carstopark.Current == 3) {
 				vars.TrySplit("valet_started");
@@ -6006,7 +6059,7 @@ split {
 		// 100% Achieved
 		//==============
 		// Split when the hundo rewards are given
-		// var hundo_achieved = vars.watchers["100%_achieved"];
+		// var hundo_achieved = vars.GetWatcher("100%_achieved");
 		// if (hundo_achieved.Current && !hundo_achieved.Old) {
 		// 	vars.TrySplit("100% Achieved");
 		// }
@@ -6024,7 +6077,7 @@ split {
 				case 4: gfName = "katie"; break;
 				case 5: gfName = "millie"; break;
 			}
-			var progress = vars.watchers["gf_"+gfName+"_progress"];
+			var progress = vars.GetWatcher("gf_"+gfName+"_progress");
 			if (progress.Current != progress.Old) {
 				if (progress.Current == -999) {
 					vars.TrySplit("gf_"+gfName+"_killed");
@@ -6037,7 +6090,7 @@ split {
 				}
 			}
 		}
-		var gf_unlocked = vars.watchers["gf_unlocked"];
+		var gf_unlocked = vars.GetWatcher("gf_unlocked");
 		int gf_unlockedOld = gf_unlocked.Old;
 		int gf_unlockedCurrent = gf_unlocked.Current;
 		if (gf_unlocked.Current != gf_unlocked.Old) {
@@ -6052,7 +6105,7 @@ split {
 
 		// Busted/Deathwarp
 		//=================
-		var pedStatus = vars.watchers["pedStatus"];
+		var pedStatus = vars.GetWatcher("pedStatus");
 		if (pedStatus.Current != pedStatus.Old) {
 			if (pedStatus.Current == 63) // Busted
 			{
@@ -6105,10 +6158,10 @@ start {
 	// Starting Timer
 	//=============================================================================
 
-	var playingTime = vars.watchers["playingTime"];
-	var intro_cutsceneState = vars.watchers["intro_cutsceneState"];
-	// var loading = vars.watchers["loading"];
-	var intro_passed = vars.watchers["intro_passed"];
+	var playingTime = vars.GetWatcher("playingTime");
+	var intro_cutsceneState = vars.GetWatcher("intro_cutsceneState");
+	// var loading = vars.GetWatcher("loading");
+	var intro_passed = vars.GetWatcher("intro_passed");
 
 	/*
 	 * Note:
@@ -6196,10 +6249,10 @@ start {
 }
 
 reset {
-	var playingTime = vars.watchers["playingTime"];
-	var intro_cutsceneState = vars.watchers["intro_cutsceneState"];
-	// var loading = vars.watchers["loading"];
-	var intro_passed = vars.watchers["intro_passed"];
+	var playingTime = vars.GetWatcher("playingTime");
+	var intro_cutsceneState = vars.GetWatcher("intro_cutsceneState");
+	// var loading = vars.GetWatcher("loading");
+	var intro_passed = vars.GetWatcher("intro_passed");
 	/*
 	 * Previously the playingTime was used to reset the timer, although it seems like for
 	 * different people the game started at different playingTime values (probably depending
