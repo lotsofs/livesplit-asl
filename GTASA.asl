@@ -88,15 +88,29 @@ startup {
 		};
 		vars.DebugWatcherOutput = DebugWatcherOutput;
 
+		// Get a watcher's value. Update if it hasn't been gotten yet this tick, 
+		// otherwise just read its value again
 		Func<string, MemoryWatcher> GetWatcher = (name) => {
 			var w = vars.watcherList[name];
 			if (vars.currentWatchers.Contains(name)) {
 				return w;
 			}
 			w.Update(vars.game);
+			vars.currentWatchers.Add(name);
 			return w;
 		};
 		vars.GetWatcher = GetWatcher;
+
+		// Add basic mission stuff (marker & start setting, strings to monitor, etc)
+		Action<string,string,string,string> RegisterMissionBasics = (mAbbr, mName, mThread, mParent) => {
+			settings.Add(mAbbr, true, mName, mParent);
+			settings.CurrentDefaultParent = mAbbr;
+			settings.Add(mAbbr+"_marker", false, "Mission Marker Entered");
+			settings.Add(mAbbr+"_start", false, "Mission Started");
+			vars.significantThreads.Add(mThread, mAbbr+"_start");
+			vars.missionNames.Add(mName, mAbbr+"_marker");
+		};
+		vars.RegisterMissionBasics = RegisterMissionBasics;
 	#endregion
 	#region Address Keeping
 		// Global SCM variables ($xxxx) to watch in memory
@@ -112,6 +126,10 @@ startup {
 		// Pointer addresses
 		vars.pointerList = new List<Tuple<string, int, DeepPointer>>();
 
+		// Strings to look out for
+		vars.significantThreads = new Dictionary<string,string>();
+		vars.missionNames = new Dictionary<string,string>();
+
 		Action<int,string,int> AddNonScmAddressWatcher = (address,name,bytes) => {
 			vars.nonScmAddresses.Add(Tuple.Create(name, bytes, address));
 		};
@@ -126,9 +144,6 @@ startup {
 			vars.pointerList.Add(Tuple.Create(name, bytes, pointer));
 		};
 		vars.AddPointerWatcher = AddPointerWatcher;
-
-		vars.significantThreads = new Dictionary<string,string>();
-		vars.missionNames = new Dictionary<string,string>();
 	#endregion
 
 	//=============================================================================
@@ -146,8 +161,8 @@ startup {
 	//=============================================================================
 	// Settings & Memory Addresses
 	//=============================================================================
-	// There are more memory addresses defined in `init` in the "Version Detection"
-	// and "Memory Watcher" sections.  TODO: Confirm this
+	// More memory addresses are defined in `init`, in the "Version Detection"
+	// and "Memory Address Watching" sections.
 
 	// Funcs to execute in the split check.
 	// Checks conditions, then if a condition is met, returns the ID of a split.
@@ -155,6 +170,10 @@ startup {
 	vars.CheckSplit = new List<Func<string>>();
 
 	#region Settings & Split Checking
+		// Add some very basic addresses
+		vars.watchScmGlobalVariables.Add(43, "interior");			// $ACTIVE_INTERIOR
+		vars.watchScmGlobalVariables.Add(24, "intro_passed");		// $MISSION_INTRO_PASSED	
+		
 		settings.Add("Splits", true, "Splits");
 		settings.CurrentDefaultParent = "Splits";
 		// Settings as well as the splitting logic is all kept together in one place
@@ -389,656 +408,723 @@ startup {
 					// 9: Los Sepulcros
 					vars.watchScmGlobalVariables.Add(452, "ls_sweet_chain"); // $SWEET_TOTAL_PASSED_MISSIONS
 
-				#region Tagging up Turf
-					// ====================
-					settings.Add("tut", true, "Tagging up Turf", "LS_Sweet");
-					settings.SetToolTip("tut", "Specific tags involved are 39, 38, 37, 63, 64 & 62");
-					settings.CurrentDefaultParent = "tut";
-					settings.Add("tut_marker", false, "Mission Marker Entered");
-					settings.Add("tut_start", false, "Mission Started");
-					settings.Add("tut_introCutsceneEnd", false, "Intro cinematic end");
-					settings.Add("tut_cutsceneSweetSprayTagEnd", false, "Cutscene of Sweet spraying first tag ended");
-					settings.Add("tut_carEnterAfterTag3", false, "Entering the car after spraying first group of tags");
-					settings.Add("tut_carExitBeforeTag4", false, "Exiting the car before spraying second group of tags");
-					settings.Add("tut_approachingGangMembers", false, "Approaching tag with gang members");
-					settings.Add("tut_carEnterAfterTag6", false, "Entering the car after spraying second group of tags");
-					settings.Add("tut_finalCutsceneStart", false, "Ending cutscene start");
-					settings.Add("tut_pass", true, "Mission Passed");
+					#region Tagging up Turf
+						// ====================
+						settings.Add("tut", true, "Tagging up Turf", "LS_Sweet");
+						settings.SetToolTip("tut", "Specific tags involved are 39, 38, 37, 63, 64 & 62");
+						settings.CurrentDefaultParent = "tut";
+						settings.Add("tut_marker", false, "Mission Marker Entered");
+						settings.Add("tut_start", false, "Mission Started");
+						settings.Add("tut_introCutsceneEnd", false, "Intro cinematic end");
+						settings.Add("tut_cutsceneSweetSprayTagEnd", false, "Cutscene of Sweet spraying first tag ended");
+						settings.Add("tut_carEnterAfterTag3", false, "Entering the car after spraying first group of tags");
+						settings.Add("tut_carExitBeforeTag4", false, "Exiting the car before spraying second group of tags");
+						settings.Add("tut_approachingGangMembers", false, "Approaching tag with gang members");
+						settings.Add("tut_carEnterAfterTag6", false, "Entering the car after spraying second group of tags");
+						settings.Add("tut_finalCutsceneStart", false, "Ending cutscene start");
+						settings.Add("tut_pass", true, "Mission Passed");
 
-					vars.watchScmMissionLocalVariables.Add(40);
-					vars.watchScmMissionLocalVariables.Add(46);
-					vars.watchScmMissionLocalVariables.Add(48);
-					vars.watchScmMissionLocalVariables.Add(58);
-					vars.watchScmMissionLocalVariables.Add(65);
+						vars.watchScmMissionLocalVariables.Add(40);
+						vars.watchScmMissionLocalVariables.Add(46);
+						vars.watchScmMissionLocalVariables.Add(48);
+						vars.watchScmMissionLocalVariables.Add(58);
+						vars.watchScmMissionLocalVariables.Add(65);
 
-					vars.significantThreads.Add("sweet1","tut_start");
-					vars.missionNames.Add("Tagging up Turf","tut_marker");
+						vars.significantThreads.Add("sweet1","tut_start");
+						vars.missionNames.Add("Tagging up Turf","tut_marker");
 
-					Func<string> func_tut = () => {
-						if (!vars.ValidateMissionProgress("sweet1", "ls_sweet_chain", 0, 1, "tut_pass", "tut")) {
-							return;
-						}
-
-						// Dialogue block:
-						// 4 - Hey, wait up!
-						// 6 - Like riding a bike ain't it boy
-						var tut_dialogueBlock = vars.GetWatcher("48@");
-						if (tut_dialogueBlock.Changed) {
-							if (tut_dialogueBlock.Old == 0 && tut_dialogueBlock.Current == 4) {
-								return "tut_introCutsceneEnd";
+						Func<string> func_tut = () => {
+							if (!vars.ValidateMissionProgress("sweet1", "ls_sweet_chain", 0, 1, "tut_pass", "tut")) {
+								return;
 							}
-							if (tut_dialogueBlock.Old == 4 && tut_dialogueBlock.Current == 6) {
-								// $6548 also covers this (changes from 0 to 1)
-								return "tut_finalCutsceneStart";
-							}
-						}
 
-						if (tut_dialogueBlock.Current == 0) {
-							// Failsafe for mission restart
-							return;
-						}
-
-						// Something also related to help boxes or something. Gets set to 1 when the cutscene ends, and to 2 shortly after.
-						var tut_cutsceneSweetSprayTagEnd = vars.GetWatcher("65@");
-						if (tut_cutsceneSweetSprayTagEnd.Changed && tut_cutsceneSweetSprayTagEnd.Old == 0 && tut_cutsceneSweetSprayTagEnd.Current == 1) {
-							return "tut_cutsceneSweetSprayTagEnd";
-						}
-
-						// Sub phase:
-						// Appears to be related to the help boxes/objectives notifications.
-						// It gets set to 1 when the "hold LMB to spray" box displays, and 2 for the subsequent box
-						// Upon entering Sweets car after spraying first 3 tags, it gets reset to 0
-						// On the drive, it gets set to 1.
-						// It gets set to 0 when leaving the car, then set back to 1 shortly after.
-						var tut_subPhase = vars.GetWatcher("58@");
-						if (tut_subPhase.Changed) {
-							if (tut_subPhase.Old == 2 && tut_subPhase.Current == 0) {
-								return "tut_carEnterAfterTag3";
-							}
-							else if (tut_subPhase.Old == 1 && tut_subPhase.Current == 0) {
-								return "tut_carExitBeforeTag4";
-							}
-						}
-
-						// A variable keeping track of which lines are to be said by the gang members.
-						// Set to 1 when the approach cutscene ended, or when it should have played if killing the gang members
-						// Set to 2 and then 3 as lines are spoken, or to 4 if gang members are dead
-						var tut_approachingGangMembers = vars.GetWatcher("46@");
-						if (tut_approachingGangMembers.Changed && tut_approachingGangMembers.Old == 0 && tut_approachingGangMembers.Current == 1) {
-							return "tut_approachingGangMembers";
-						}
-
-						// "Get us back to the hood, CJ" line played
-						var tut_carEnterAfterTag6 = vars.GetWatcher("40@");
-						if (tut_carEnterAfterTag6.Changed && tut_carEnterAfterTag6.Old == 0 && tut_carEnterAfterTag6.Current == 1) {
-							return "tut_carEnterAfterTag6";
-						}
-
-						return;
-					};
-					vars.CheckSplit.Add(func_tut);
-
-				#endregion
-				#region Cleaning the Hood
-					settings.Add("cth", true, "Cleaning the Hood", "LS_Sweet");
-					settings.CurrentDefaultParent = "cth";
-					settings.Add("cth_marker", false, "Mission Marker Entered");
-					settings.Add("cth_start", false, "Mission Started");
-					settings.Add("cth_cutsceneSkipped", false, "Intro cinematic end");
-					settings.Add("cth_bDupVisited", false, "After visiting B Dup");
-					settings.Add("cth_dealerApproached", false, "Approaching and talking to the dealer");
-					settings.SetToolTip("cth_dealerApproached", "This is skipped in common speedruns.");
-					settings.Add("cth_dealerKilled", false, "Cutscene start after killing dealer");
-					settings.Add("cth_crackDenArrive", false, "Arrival in front of the crack Den");
-					settings.Add("cth_crackDenCleared", false, "Crack den occupants killed");
-					settings.Add("cth_finalCutscene", false, "Arrival back at Grove Street");
-					settings.Add("cth_pass", true, "Mission Passed");
-
-					vars.watchScmMissionLocalVariables.Add(43);
-					vars.watchScmMissionLocalVariables.Add(87);
-					vars.watchScmMissionLocalVariables.Add(91);
-					vars.watchScmMissionLocalVariables.Add(102);
-
-					vars.significantThreads.Add("sweet1b","cth_start");
-					vars.missionNames.Add("Cleaning the Hoo","cth_marker");
-
-					Func<string> func_cth = () => {
-						if (!vars.ValidateMissionProgress("sweet1b", "ls_sweet_chain", 1, 2, "cth_pass", "cth")) {
-							return;
-						}
-
-						// Act:
-						// 0 - Start
-						// 1 - After visiting B Dup
-						// 2 - After dealer dead cutscene
-						// 3 - Getting out of the car in front of the house
-						// 4 - Indoor combat done
-						var cth_stage = vars.GetWatcher("102@");
-						if (cth_stage.Changed) {
-							if (cth_stage.Current == 1) {
-								return "cth_bDupVisited";
-							}
-							else if (cth_stage.Current == 3) {
-								return "cth_crackDenArrive";
-							}
-						}
-
-						// Dialogue block:
-						// 0 - Hey, B Dup is only a couple blocks (7)
-						// 1 - Man, I know this cat (6)
-						// 2 - <unused>
-						// 3 - Now Ballas know Grove Street Families on their way back up (5)
-						// 4 - Hey Partner, Im working man (1)
-						// 5 - Man, we on a serious mission now (1)
-						// 6 - Oooeee you can smell a crack den (1)
-						// 7 - Now that the base ain't getting pushed up (3)
-						var cth_dialogueBlock = vars.GetWatcher("87@");
-						if (cth_dialogueBlock.Changed) {
-							if (cth_dialogueBlock.Current == 4) {
-								return "cth_dealerApproached";
-							}
-							else if (cth_dialogueBlock.Current == 1) {
-								return "cth_dealerKilled";
-							}
-							else if (cth_dialogueBlock.Current == 7) {
-								return "cth_finalCutscene";
-							}
-						}
-
-						// When a dialogue block is selected, another variable is set as well to indicate the number of lines in this dialogue.
-						var cth_dialogueLength = vars.GetWatcher("91@");
-						if (cth_dialogueLength.Changed) {
-							if (cth_dialogueLength.Current == 7) {
-								return "cth_cutsceneSkipped";
-							}
-						}
-
-						// Upon killing all 3 Ballas guys
-						var cth_crackDenCleared = vars.GetWatcher("43@");
-						if (cth_crackDenCleared.Changed && cth_crackDenCleared.Old == 0 && cth_crackDenCleared.Current == 1) {
-							return "cth_crackDenCleared";
-						}
-						return;
-					};
-					vars.CheckSplit.Add(func_cth);
-
-				#endregion
-				#region Drive-Thru
-					settings.Add("dt", true, "Drive-Thru", "LS_Sweet");
-					settings.CurrentDefaultParent = "dt";
-					settings.Add("dt_marker", false, "Mission Marker Entered");
-					settings.Add("dt_start", false, "Mission Started");
-					settings.Add("dt_introEnded", false, "Intro cinematic end");
-					settings.Add("dt_chaseStarted", false, "Start of the chase");
-					settings.Add("dt_chaseOver", false, "Ballas killed");
-					settings.Add("dt_returnToGrove", false, "Start of cutscene back at Grove Street");
-					settings.Add("dt_leavingGrove", false, "End of cutscene back at Grove Street");
-					settings.Add("dt_arriveAtSmokes", false, "Arrival at Big Smoke's House");
-					settings.Add("dt_pass", true, "Mission Passed");
-					settings.SetToolTip("dt_introEnded", "Splits after \"Smoke looks like he's gonna pass out\" line.");
-
-					vars.watchScmMissionLocalVariables.Add(79);
-
-					vars.significantThreads.Add("sweet3","dt_start");
-					vars.missionNames.Add("Drive-thru","dt_marker");
-
-					Func<string> func_dt = () => {
-						if (!vars.ValidateMissionProgress("sweet3", "ls_sweet_chain", 2, 3, "dt_pass", "dt")) {
-							return;
-						}
-
-						// Dialogue block:
-						// 1 - How'd mom get killed
-						// 2 - Hit it, go go go
-						// 3 - Damn that was some serious shit
-						// 4 - Thats one up for the Grove
-						// 5 - What was with you back there Smoke
-						// 6 - Hey thanks Carl
-						// 7 - My special!
-						// 8 - Watch the damn road
-						var dt_dialogueBlock = vars.GetWatcher("79@");
-						if (dt_dialogueBlock.Changed) {
-							if (dt_dialogueBlock.Current == 1) {
-								return "dt_introEnded";
-							}
-							if (dt_dialogueBlock.Current == 2) {
-								return "dt_chaseStarted";
-							}
-							else if (dt_dialogueBlock.Current == 3) {
-								return "dt_chaseOver";
-							}
-							else if (dt_dialogueBlock.Current == 4) {
-								return "dt_returnToGrove";
-							}
-							else if (dt_dialogueBlock.Current == 5) {
-								return "dt_leavingGrove";
-							}
-							else if (dt_dialogueBlock.Current == 6) {
-								return "dt_arriveAtSmokes";
-							}
-						}
-
-						return;
-					};
-					vars.CheckSplit.Add(func_dt);
-				#endregion
-				#region Nines and AK's
-					settings.Add("naak", true, "Nines and AK's", "LS_Sweet");
-					settings.CurrentDefaultParent = "naak";
-					settings.Add("naak_marker", false, "Mission Marker Entered");
-					settings.Add("naak_start", false, "Mission Started");
-					settings.Add("naak_cutsceneEnd", false, "Intro cinematic end");
-					settings.Add("naak_round1Start", false, "Bottleshooter round 1 started");
-					settings.Add("naak_round1Bottle1", false, "Round 1: 1 bottle shot");
-					settings.Add("naak_round2Start", false, "Bottleshooter round 1 started");
-					settings.Add("naak_round2Bottle1", false, "Round 2: 1 bottle shot");
-					settings.Add("naak_round2Bottle2", false, "Round 2: 2 bottles shot");
-					settings.Add("naak_round2Bottle3", false, "Round 2: 3 bottles shot");
-					settings.Add("naak_round3Start", false, "Bottleshooter round 3 started");
-					settings.Add("naak_round3Bottle1", false, "Round 3: 1 bottle shot");
-					settings.Add("naak_round3Bottle2", false, "Round 3: 2 bottles shot");
-					settings.Add("naak_round3Bottle3", false, "Round 3: 3 bottles shot");
-					settings.Add("naak_round3Bottle4", false, "Round 3: 4 bottles shot");
-					settings.Add("naak_round3Bottle5", false, "Round 3: 5 bottles shot");
-					settings.Add("naak_postShootoutCutsceneStart", false, "Start of cutscene after blowing up Tampa");
-					settings.Add("naak_postShootoutCutsceneEnd", false, "End of cutscene after blowing up Tampa");
-					settings.Add("naak_phoneCall", false, "Answering Sweet's phone call");
-					settings.Add("naak_shopEnter", false, "Clothing store enter");
-					settings.Add("naak_shopExit", false, "Clothing store exit");
-					settings.Add("naak_pass", true, "Mission Passed");
-
-					vars.watchScmMissionLocalVariables.Add(39);
-					vars.watchScmMissionLocalVariables.Add(48);
-					vars.watchScmMissionLocalVariables.Add(36);
-					vars.watchScmMissionLocalVariables.Add(62);
-					vars.watchScmMissionLocalVariables.Add(64);
-					vars.watchScmMissionLocalVariables.Add(86);
-
-					vars.significantThreads.Add("sweet2","naak_start");
-					vars.missionNames.Add("Nines and AK's","naak_marker");
-
-					Func<string> func_naak = () => {
-						if (!vars.ValidateMissionProgress("sweet2", "ls_sweet_chain", 3, 4, "naak_pass", "naak")) {
-							return;
-						}
-
-						// Dialogue block:
-						// 0 - What happened to the families? (8)
-						// 1 - Damn, you a killer baby, ice cold
-						// 2 - Whats going on man shit seems fucked up
-						// 3 - Speak; I thought you was representing
-						var naak_dialogueBlock = vars.GetWatcher("39@");
-						if (naak_dialogueBlock.Changed) {
-							if (naak_dialogueBlock.Current == 1) {
-								return "naak_postShootoutCutsceneStart";
-							}
-							if (naak_dialogueBlock.Current == 2) {
-								return "naak_postShootoutCutsceneEnd";
-							}
-							else if (naak_dialogueBlock.Current == 3) {
-								return "naak_phoneCall";
-							}
-						}
-						var naak_dialogueLength = vars.GetWatcher("48@");
-						if (naak_dialogueLength.Changed) {
-							if (naak_dialogueLength.Current == 8 && naak_dialogueLength.Old == 0) {
-								return "naak_cutsceneEnd";
-							}
-						}
-
-						// Bottle shooter segment:
-						// Smoke actions:
-						// 0 - First bottle
-						// 3 - Second three bottles
-						// 6 - Final five bottles
-						var naak_combatActive = vars.GetWatcher("62@");
-						if (naak_combatActive.Current == 1) {
-							var naak_smokeActions = vars.GetWatcher("64@");
-							var naak_bottlesShot = vars.GetWatcher("36@");
-							if (naak_combatActive.Changed) {
-								if (naak_smokeActions.Current == 0) {
-									return "naak_round1Start";
+							// Dialogue block:
+							// 4 - Hey, wait up!
+							// 6 - Like riding a bike ain't it boy
+							var tut_dialogueBlock = vars.GetWatcher("48@");
+							if (tut_dialogueBlock.Changed) {
+								if (tut_dialogueBlock.Old == 0 && tut_dialogueBlock.Current == 4) {
+									return "tut_introCutsceneEnd";
 								}
-								else if (naak_smokeActions.Current == 3) {
-									return "naak_round2Start";
-								}
-								else if (naak_smokeActions.Current == 6) {
-									return "naak_round3Start";
+								if (tut_dialogueBlock.Old == 4 && tut_dialogueBlock.Current == 6) {
+									// $6548 also covers this (changes from 0 to 1)
+									return "tut_finalCutsceneStart";
 								}
 							}
-							if (naak_bottlesShot.Changed && naak_bottlesShot.Current > 0) {
-								if (naak_smokeActions.Current == 0) {
-									return "naak_round1Bottle" + naak_bottlesShot.Current;
+
+							if (tut_dialogueBlock.Current == 0) {
+								// Failsafe for mission restart
+								return;
+							}
+
+							// Something also related to help boxes or something. Gets set to 1 when the cutscene ends, and to 2 shortly after.
+							var tut_cutsceneSweetSprayTagEnd = vars.GetWatcher("65@");
+							if (tut_cutsceneSweetSprayTagEnd.Changed && tut_cutsceneSweetSprayTagEnd.Old == 0 && tut_cutsceneSweetSprayTagEnd.Current == 1) {
+								return "tut_cutsceneSweetSprayTagEnd";
+							}
+
+							// Sub phase:
+							// Appears to be related to the help boxes/objectives notifications.
+							// It gets set to 1 when the "hold LMB to spray" box displays, and 2 for the subsequent box
+							// Upon entering Sweets car after spraying first 3 tags, it gets reset to 0
+							// On the drive, it gets set to 1.
+							// It gets set to 0 when leaving the car, then set back to 1 shortly after.
+							var tut_subPhase = vars.GetWatcher("58@");
+							if (tut_subPhase.Changed) {
+								if (tut_subPhase.Old == 2 && tut_subPhase.Current == 0) {
+									return "tut_carEnterAfterTag3";
 								}
-								else if (naak_smokeActions.Current == 3) {
-									return "naak_round2Bottle" + naak_bottlesShot.Current;
-								}
-								else if (naak_smokeActions.Current == 6) {
-									return "naak_round3Bottle" + naak_bottlesShot.Current;
+								else if (tut_subPhase.Old == 1 && tut_subPhase.Current == 0) {
+									return "tut_carExitBeforeTag4";
 								}
 							}
-						}
 
-						var naak_interior = vars.GetWatcher("86@");
-						if (naak_interior.Changed && naak_dialogueBlock.Current == 3) {
-							if (naak_interior.Current == 15 && naak_interior.Old == 0) {
-								return "naak_shopEnter";
+							// A variable keeping track of which lines are to be said by the gang members.
+							// Set to 1 when the approach cutscene ended, or when it should have played if killing the gang members
+							// Set to 2 and then 3 as lines are spoken, or to 4 if gang members are dead
+							var tut_approachingGangMembers = vars.GetWatcher("46@");
+							if (tut_approachingGangMembers.Changed && tut_approachingGangMembers.Old == 0 && tut_approachingGangMembers.Current == 1) {
+								return "tut_approachingGangMembers";
 							}
-							if (naak_interior.Current == 0 && naak_interior.Old == 15) {
-								return "naak_shopExit";
+
+							// "Get us back to the hood, CJ" line played
+							var tut_carEnterAfterTag6 = vars.GetWatcher("40@");
+							if (tut_carEnterAfterTag6.Changed && tut_carEnterAfterTag6.Old == 0 && tut_carEnterAfterTag6.Current == 1) {
+								return "tut_carEnterAfterTag6";
 							}
-						}
-						return;
-					};
-					vars.CheckSplit.Add(func_naak);
-				#endregion
-				#region Drive-By
-					settings.Add("db", true, "Drive-By", "LS_Sweet");
-					settings.CurrentDefaultParent = "db";
-					settings.Add("db_marker", false, "Mission Marker Entered");
-					settings.Add("db_start", false, "Mission Started");
-					settings.Add("db_carEnter", false, "Everybody entered Sweet's car");
-					settings.Add("db_markerArrive", false, "Arrival at the marker");
-					settings.Add("db_shootoutStart", false, "Shootout section begin");
-					for (int i = 0; i < 16; i++) {
-						if (i % 4 == 0) {
-							settings.Add("db_group"+(i/4), false, "Group "+((i/4)+1), "db");
-							settings.CurrentDefaultParent = "db_group"+(i/4);
-						}
-						settings.Add("db_kill"+i, false, "Ballas #"+(i+1)+" killed");
-						if (i % 4 == 3) {
-							settings.Add("db_group"+(i/4)+"all", false, "Entire group killed");
-						}
-					}
-					settings.CurrentDefaultParent = "db";
-					settings.Add("db_shootoutEnd", false, "All Ballas killed");
-					settings.Add("db_payNSpray", false, "Car resprayed");
-					settings.Add("db_groveCut", false, "Arrival at Grove Street");
-					settings.Add("db_pass", true, "Mission Passed");
 
-					vars.watchScmGlobalVariables.Add(6637, "db_stage");
-					for (int i = 0; i < 16; i++) {
-						vars.watchScmGlobalVariables.Add(6640+i, "db_kill"+i);
-					}
-
-					vars.significantThreads.Add("sweet4","db_start");
-					vars.missionNames.Add("Drive-By","db_marker");
-
-					Func<string> func_db = () => {
-						if (!vars.ValidateMissionProgress("sweet4", "ls_sweet_chain", 4, 5, "db_pass", "db")) {
 							return;
-						}
+						};
+						vars.CheckSplit.Add(func_tut);
 
-						// Stage
-						// 3 - Entered car, drive to destination
-						// 4 - Cutscene before shootout
-						// 5 - Shootout
-						// 6 - Drive to pay n spray
-						// 7 - Drive back
-						// 8 - Grove Cut
-						var db_stage = vars.GetWatcher("db_stage");
-						if (db_stage.Changed) {
-							switch ((int)db_stage.Current) {
-								case 3:
-									return "db_carEnter";
-									break;
-								case 4:
-									return "db_markerArrive";
-									break;
-								case 5:
-									return "db_shootoutStart";
-									break;
-								case 6:
-									return "db_shootoutEnd";
-									break;
-								case 7:
-									return "db_payNSpray";
-									break;
-								case 8:
-									return "db_groveCut";
-									break;
-								default:
-									break;
+					#endregion
+					#region Cleaning the Hood
+						settings.Add("cth", true, "Cleaning the Hood", "LS_Sweet");
+						settings.CurrentDefaultParent = "cth";
+						settings.Add("cth_marker", false, "Mission Marker Entered");
+						settings.Add("cth_start", false, "Mission Started");
+						settings.Add("cth_cutsceneSkipped", false, "Intro cinematic end");
+						settings.Add("cth_bDupVisited", false, "After visiting B Dup");
+						settings.Add("cth_dealerApproached", false, "Approaching and talking to the dealer");
+						settings.SetToolTip("cth_dealerApproached", "This is skipped in common speedruns.");
+						settings.Add("cth_dealerKilled", false, "Cutscene start after killing dealer");
+						settings.Add("cth_crackDenArrive", false, "Arrival in front of the crack Den");
+						settings.Add("cth_crackDenCleared", false, "Crack den occupants killed");
+						settings.Add("cth_finalCutscene", false, "Arrival back at Grove Street");
+						settings.Add("cth_pass", true, "Mission Passed");
+
+						vars.watchScmMissionLocalVariables.Add(43);
+						vars.watchScmMissionLocalVariables.Add(87);
+						vars.watchScmMissionLocalVariables.Add(91);
+						vars.watchScmMissionLocalVariables.Add(102);
+
+						vars.significantThreads.Add("sweet1b","cth_start");
+						vars.missionNames.Add("Cleaning the Hood","cth_marker");
+
+						Func<string> func_cth = () => {
+							if (!vars.ValidateMissionProgress("sweet1b", "ls_sweet_chain", 1, 2, "cth_pass", "cth")) {
+								return;
 							}
-						}
-						var db_groupKillCount = 0;
-						var db_killHappened = false;
+
+							// Act:
+							// 0 - Start
+							// 1 - After visiting B Dup
+							// 2 - After dealer dead cutscene
+							// 3 - Getting out of the car in front of the house
+							// 4 - Indoor combat done
+							var cth_stage = vars.GetWatcher("102@");
+							if (cth_stage.Changed) {
+								if (cth_stage.Current == 1) {
+									return "cth_bDupVisited";
+								}
+								else if (cth_stage.Current == 3) {
+									return "cth_crackDenArrive";
+								}
+							}
+
+							// Dialogue block:
+							// 0 - Hey, B Dup is only a couple blocks (7)
+							// 1 - Man, I know this cat (6)
+							// 2 - <unused>
+							// 3 - Now Ballas know Grove Street Families on their way back up (5)
+							// 4 - Hey Partner, Im working man (1)
+							// 5 - Man, we on a serious mission now (1)
+							// 6 - Oooeee you can smell a crack den (1)
+							// 7 - Now that the base ain't getting pushed up (3)
+							var cth_dialogueBlock = vars.GetWatcher("87@");
+							if (cth_dialogueBlock.Changed) {
+								if (cth_dialogueBlock.Current == 4) {
+									return "cth_dealerApproached";
+								}
+								else if (cth_dialogueBlock.Current == 1) {
+									return "cth_dealerKilled";
+								}
+								else if (cth_dialogueBlock.Current == 7) {
+									return "cth_finalCutscene";
+								}
+							}
+
+							// When a dialogue block is selected, another variable is set as well to indicate the number of lines in this dialogue.
+							var cth_dialogueLength = vars.GetWatcher("91@");
+							if (cth_dialogueLength.Changed) {
+								if (cth_dialogueLength.Current == 7) {
+									return "cth_cutsceneSkipped";
+								}
+							}
+
+							// Upon killing all 3 Ballas guys
+							var cth_crackDenCleared = vars.GetWatcher("43@");
+							if (cth_crackDenCleared.Changed && cth_crackDenCleared.Old == 0 && cth_crackDenCleared.Current == 1) {
+								return "cth_crackDenCleared";
+							}
+							return;
+						};
+						vars.CheckSplit.Add(func_cth);
+
+					#endregion
+					#region Drive-Thru
+						settings.Add("dt", true, "Drive-Thru", "LS_Sweet");
+						settings.CurrentDefaultParent = "dt";
+						settings.Add("dt_marker", false, "Mission Marker Entered");
+						settings.Add("dt_start", false, "Mission Started");
+						settings.Add("dt_introEnded", false, "Intro cinematic end");
+						settings.Add("dt_chaseStarted", false, "Start of the chase");
+						settings.Add("dt_chaseOver", false, "Ballas killed");
+						settings.Add("dt_returnToGrove", false, "Start of cutscene back at Grove Street");
+						settings.Add("dt_leavingGrove", false, "End of cutscene back at Grove Street");
+						settings.Add("dt_arriveAtSmokes", false, "Arrival at Big Smoke's House");
+						settings.Add("dt_pass", true, "Mission Passed");
+						settings.SetToolTip("dt_introEnded", "Splits after \"Smoke looks like he's gonna pass out\" line.");
+
+						vars.watchScmMissionLocalVariables.Add(79);
+
+						vars.significantThreads.Add("sweet3","dt_start");
+						vars.missionNames.Add("Drive-thru","dt_marker");
+
+						Func<string> func_dt = () => {
+							if (!vars.ValidateMissionProgress("sweet3", "ls_sweet_chain", 2, 3, "dt_pass", "dt")) {
+								return;
+							}
+
+							// Dialogue block:
+							// 1 - How'd mom get killed
+							// 2 - Hit it, go go go
+							// 3 - Damn that was some serious shit
+							// 4 - Thats one up for the Grove
+							// 5 - What was with you back there Smoke
+							// 6 - Hey thanks Carl
+							// 7 - My special!
+							// 8 - Watch the damn road
+							var dt_dialogueBlock = vars.GetWatcher("79@");
+							if (dt_dialogueBlock.Changed) {
+								if (dt_dialogueBlock.Current == 1) {
+									return "dt_introEnded";
+								}
+								if (dt_dialogueBlock.Current == 2) {
+									return "dt_chaseStarted";
+								}
+								else if (dt_dialogueBlock.Current == 3) {
+									return "dt_chaseOver";
+								}
+								else if (dt_dialogueBlock.Current == 4) {
+									return "dt_returnToGrove";
+								}
+								else if (dt_dialogueBlock.Current == 5) {
+									return "dt_leavingGrove";
+								}
+								else if (dt_dialogueBlock.Current == 6) {
+									return "dt_arriveAtSmokes";
+								}
+							}
+
+							return;
+						};
+						vars.CheckSplit.Add(func_dt);
+					#endregion
+					#region Nines and AK's
+						settings.Add("naak", true, "Nines and AK's", "LS_Sweet");
+						settings.CurrentDefaultParent = "naak";
+						settings.Add("naak_marker", false, "Mission Marker Entered");
+						settings.Add("naak_start", false, "Mission Started");
+						settings.Add("naak_cutsceneEnd", false, "Intro cinematic end");
+						settings.Add("naak_round1Start", false, "Bottleshooter round 1 started");
+						settings.Add("naak_round1Bottle1", false, "Round 1: 1 bottle shot");
+						settings.Add("naak_round2Start", false, "Bottleshooter round 1 started");
+						settings.Add("naak_round2Bottle1", false, "Round 2: 1 bottle shot");
+						settings.Add("naak_round2Bottle2", false, "Round 2: 2 bottles shot");
+						settings.Add("naak_round2Bottle3", false, "Round 2: 3 bottles shot");
+						settings.Add("naak_round3Start", false, "Bottleshooter round 3 started");
+						settings.Add("naak_round3Bottle1", false, "Round 3: 1 bottle shot");
+						settings.Add("naak_round3Bottle2", false, "Round 3: 2 bottles shot");
+						settings.Add("naak_round3Bottle3", false, "Round 3: 3 bottles shot");
+						settings.Add("naak_round3Bottle4", false, "Round 3: 4 bottles shot");
+						settings.Add("naak_round3Bottle5", false, "Round 3: 5 bottles shot");
+						settings.Add("naak_postShootoutCutsceneStart", false, "Start of cutscene after blowing up Tampa");
+						settings.Add("naak_postShootoutCutsceneEnd", false, "End of cutscene after blowing up Tampa");
+						settings.Add("naak_phoneCall", false, "Answering Sweet's phone call");
+						settings.Add("naak_shopEnter", false, "Clothing store enter");
+						settings.Add("naak_shopExit", false, "Clothing store exit");
+						settings.Add("naak_pass", true, "Mission Passed");
+
+						vars.watchScmMissionLocalVariables.Add(39);
+						vars.watchScmMissionLocalVariables.Add(48);
+						vars.watchScmMissionLocalVariables.Add(36);
+						vars.watchScmMissionLocalVariables.Add(62);
+						vars.watchScmMissionLocalVariables.Add(64);
+						vars.watchScmMissionLocalVariables.Add(86);
+
+						vars.significantThreads.Add("sweet2","naak_start");
+						vars.missionNames.Add("Nines and AK's","naak_marker");
+
+						Func<string> func_naak = () => {
+							if (!vars.ValidateMissionProgress("sweet2", "ls_sweet_chain", 3, 4, "naak_pass", "naak")) {
+								return;
+							}
+
+							// Dialogue block:
+							// 0 - What happened to the families? (8)
+							// 1 - Damn, you a killer baby, ice cold
+							// 2 - Whats going on man shit seems fucked up
+							// 3 - Speak; I thought you was representing
+							var naak_dialogueBlock = vars.GetWatcher("39@");
+							if (naak_dialogueBlock.Changed) {
+								if (naak_dialogueBlock.Current == 1) {
+									return "naak_postShootoutCutsceneStart";
+								}
+								if (naak_dialogueBlock.Current == 2) {
+									return "naak_postShootoutCutsceneEnd";
+								}
+								else if (naak_dialogueBlock.Current == 3) {
+									return "naak_phoneCall";
+								}
+							}
+							var naak_dialogueLength = vars.GetWatcher("48@");
+							if (naak_dialogueLength.Changed) {
+								if (naak_dialogueLength.Current == 8 && naak_dialogueLength.Old == 0) {
+									return "naak_cutsceneEnd";
+								}
+							}
+
+							// Bottle shooter segment:
+							// Smoke actions:
+							// 0 - First bottle
+							// 3 - Second three bottles
+							// 6 - Final five bottles
+							var naak_combatActive = vars.GetWatcher("62@");
+							if (naak_combatActive.Current == 1) {
+								var naak_smokeActions = vars.GetWatcher("64@");
+								var naak_bottlesShot = vars.GetWatcher("36@");
+								if (naak_combatActive.Changed) {
+									if (naak_smokeActions.Current == 0) {
+										return "naak_round1Start";
+									}
+									else if (naak_smokeActions.Current == 3) {
+										return "naak_round2Start";
+									}
+									else if (naak_smokeActions.Current == 6) {
+										return "naak_round3Start";
+									}
+								}
+								if (naak_bottlesShot.Changed && naak_bottlesShot.Current > 0) {
+									if (naak_smokeActions.Current == 0) {
+										return "naak_round1Bottle" + naak_bottlesShot.Current;
+									}
+									else if (naak_smokeActions.Current == 3) {
+										return "naak_round2Bottle" + naak_bottlesShot.Current;
+									}
+									else if (naak_smokeActions.Current == 6) {
+										return "naak_round3Bottle" + naak_bottlesShot.Current;
+									}
+								}
+							}
+
+							var naak_interior = vars.GetWatcher("86@");
+							if (naak_interior.Changed && naak_dialogueBlock.Current == 3) {
+								if (naak_interior.Current == 15 && naak_interior.Old == 0) {
+									return "naak_shopEnter";
+								}
+								if (naak_interior.Current == 0 && naak_interior.Old == 15) {
+									return "naak_shopExit";
+								}
+							}
+							return;
+						};
+						vars.CheckSplit.Add(func_naak);
+					#endregion
+					#region Drive-By
+						settings.Add("db", true, "Drive-By", "LS_Sweet");
+						settings.CurrentDefaultParent = "db";
+						settings.Add("db_marker", false, "Mission Marker Entered");
+						settings.Add("db_start", false, "Mission Started");
+						settings.Add("db_carEnter", false, "Everybody entered Sweet's car");
+						settings.Add("db_markerArrive", false, "Arrival at the marker");
+						settings.Add("db_shootoutStart", false, "Shootout section begin");
 						for (int i = 0; i < 16; i++) {
 							if (i % 4 == 0) {
-								db_groupKillCount = 0;
+								settings.Add("db_group"+(i/4), false, "Group "+((i/4)+1), "db");
+								settings.CurrentDefaultParent = "db_group"+(i/4);
 							}
-							var db_kill = vars.GetWatcher("db_kill"+i);
-							if (db_kill.Current == 1) {
-								db_groupKillCount++;
-								if (db_kill.Changed) {
-									db_killHappened = true;
-									vars.TrySplit("db_kill"+i);
+							settings.Add("db_kill"+i, false, "Ballas #"+(i+1)+" killed");
+							if (i % 4 == 3) {
+								settings.Add("db_group"+(i/4)+"all", false, "Entire group killed");
+							}
+						}
+						settings.CurrentDefaultParent = "db";
+						settings.Add("db_shootoutEnd", false, "All Ballas killed");
+						settings.Add("db_payNSpray", false, "Car resprayed");
+						settings.Add("db_groveCut", false, "Arrival at Grove Street");
+						settings.Add("db_pass", true, "Mission Passed");
+
+						vars.watchScmGlobalVariables.Add(6637, "db_stage");
+						for (int i = 0; i < 16; i++) {
+							vars.watchScmGlobalVariables.Add(6640+i, "db_kill"+i);
+						}
+
+						vars.significantThreads.Add("sweet4","db_start");
+						vars.missionNames.Add("Drive-By","db_marker");
+
+						Func<string> func_db = () => {
+							if (!vars.ValidateMissionProgress("sweet4", "ls_sweet_chain", 4, 5, "db_pass", "db")) {
+								return;
+							}
+
+							// Stage
+							// 3 - Entered car, drive to destination
+							// 4 - Cutscene before shootout
+							// 5 - Shootout
+							// 6 - Drive to pay n spray
+							// 7 - Drive back
+							// 8 - Grove Cut
+							var db_stage = vars.GetWatcher("db_stage");
+							if (db_stage.Changed) {
+								switch ((int)db_stage.Current) {
+									case 3:
+										return "db_carEnter";
+										break;
+									case 4:
+										return "db_markerArrive";
+										break;
+									case 5:
+										return "db_shootoutStart";
+										break;
+									case 6:
+										return "db_shootoutEnd";
+										break;
+									case 7:
+										return "db_payNSpray";
+										break;
+									case 8:
+										return "db_groveCut";
+										break;
+									default:
+										break;
 								}
-								if (db_groupKillCount == 4 && db_killHappened) {
-									vars.TrySplit("db_group"+(i/4)+"all");
+							}
+							var db_groupKillCount = 0;
+							var db_killHappened = false;
+							for (int i = 0; i < 16; i++) {
+								if (i % 4 == 0) {
+									db_groupKillCount = 0;
+								}
+								var db_kill = vars.GetWatcher("db_kill"+i);
+								if (db_kill.Current == 1) {
+									db_groupKillCount++;
+									if (db_kill.Changed) {
+										db_killHappened = true;
+										vars.TrySplit("db_kill"+i);
+									}
+									if (db_groupKillCount == 4 && db_killHappened) {
+										vars.TrySplit("db_group"+(i/4)+"all");
+									}
 								}
 							}
-						}
-						return;
-					};
-					vars.CheckSplit.Add(func_db);
-
-				#endregion
-				#region Sweet's Girl
-					settings.Add("sg", true, "Sweet's Girl", "LS_Sweet");
-					settings.CurrentDefaultParent = "sg";
-					settings.Add("sg_marker", false, "Mission Marker Entered");
-					settings.Add("sg_start", false, "Mission Started");
-					settings.Add("sg_introCut", false, "Intro cinematic end");
-					settings.Add("sg_combatOver", false, "All enemies killed");
-					settings.Add("sg_findCar", false, "Phonecall end");
-					settings.Add("sg_carFound", false, "Marker entered with valid 4-door car");
-					settings.Add("sg_chaseStart", false, "Chase start");
-					settings.Add("sg_chaseEnd", false, "Arrival at Sweet's house");
-					settings.Add("sg_pass", true, "Mission Passed");
-
-					vars.watchScmMissionLocalVariables.Add(127);
-
-					vars.significantThreads.Add("hoods5","sg_start");
-					vars.missionNames.Add("Sweet's Girl","sg_marker");
-
-					Func<string> func_sg = () => {
-						if (!vars.ValidateMissionProgress("hoods5", "ls_sweet_chain", 5,  6, "sg_pass", "sg")) {
 							return;
-						}
+						};
+						vars.CheckSplit.Add(func_db);
 
-						// Stage:
-						// 1 - Intro cinematic + phonecall cutscene
-						// 2 - Drive to location
-						// 3 - Everybody killed, phonecall
-						// 4 - Find car
-						// 5 - Sweet gets in car cutscene
-						// 6 - Chase
-						// 7 - End cut
-						// 8 - Mission Passed
-						var sg_stage = vars.GetWatcher("127@");
-						if (sg_stage.Changed) {
-							switch ((int)sg_stage.Current) {
-								case 2:
-									return "sg_introCut";
-									break;
-								case 3:
-									return "sg_combatOver";
-									break;
-								case 4:
-									return "sg_findCar";
-									break;
-								case 5:
-									return "sg_carFound";
-									break;
-								case 6:
-									return "sg_chaseStart";
-									break;
-								case 7:
-									return "sg_chaseEnd";
-									break;
+					#endregion
+					#region Sweet's Girl
+						settings.Add("sg", true, "Sweet's Girl", "LS_Sweet");
+						settings.CurrentDefaultParent = "sg";
+						settings.Add("sg_marker", false, "Mission Marker Entered");
+						settings.Add("sg_start", false, "Mission Started");
+						settings.Add("sg_introCut", false, "Intro cinematic end");
+						settings.Add("sg_combatOver", false, "All enemies killed");
+						settings.Add("sg_findCar", false, "Phonecall end");
+						settings.Add("sg_carFound", false, "Marker entered with valid 4-door car");
+						settings.Add("sg_chaseStart", false, "Chase start");
+						settings.Add("sg_chaseEnd", false, "Arrival at Sweet's house");
+						settings.Add("sg_pass", true, "Mission Passed");
+
+						vars.watchScmMissionLocalVariables.Add(127);
+
+						vars.significantThreads.Add("hoods5","sg_start");
+						vars.missionNames.Add("Sweet's Girl","sg_marker");
+
+						Func<string> func_sg = () => {
+							if (!vars.ValidateMissionProgress("hoods5", "ls_sweet_chain", 5,  6, "sg_pass", "sg")) {
+								return;
 							}
-						}
-						return;
-					};
-					vars.CheckSplit.Add(func_sg);
-				#endregion
-				#region Cesar Vialpando
-					settings.Add("cv", true, "Cesar Vialpando", "LS_Sweet");
-					settings.CurrentDefaultParent = "cv";
-					settings.Add("cv_marker", false, "Mission Marker Entered");
-					settings.Add("cv_start", false, "Mission Started");
-					settings.Add("cv_introCut", false, "Intro cinematic end");
-					settings.Add("cv_arriveAtGarage", false, "Arriving at the mod shop");
-					settings.Add("cv_cutsceneAtGarageStart", false, "Cutscene at mod shop start");
-					settings.Add("cv_cutsceneAtGarageEnd", false, "Cutscene at mod shop end");
-					settings.Add("cv_garageEnter", false, "Mod shop entered");
-					settings.Add("cv_garageExit", false, "Mod shop exited");
-					settings.Add("cv_danceCutStart", false, "Arrival at the car meeting");
-					settings.Add("cv_danceCutEnd", false, "Start of the wager placement screen");
-					settings.Add("cv_wagerPlaced", false, "Wager placed");
-					settings.Add("cv_danceStart", false, "Dance start");
-					settings.Add("cv_feedbackStart", false, "Dance end");
-					settings.Add("cv_endCinematicStart", false, "Start of final cinematic");
-					settings.Add("cv_pass", true, "Mission Passed");
 
-					vars.watchScmMissionLocalVariables.Add(34);
-					vars.watchScmMissionLocalVariables.Add(35);
-
-					vars.significantThreads.Add("sweet6", "cv_start");
-					vars.missionNames.Add("Cesar Vialpando","cv_marker");
-
-					Func<string> func_cv = () => {
-						if (!vars.ValidateMissionProgress("sweet6", "ls_sweet_chain", 6, 7, "cv_pass", "cv")) {
-							return;
-						}
-
-						// Stage.SubStage:
-						// 1.1 = Intro cutscene
-						// 1.2 = Fadein
-						// 2.0 = Drive
-						// 2.2 = Marker hit (fadeout)
-						// 2.4 = Cutscene of guy handing you car
-						// 2.19 = Gameplay, drive car into garage
-						// 2.20 = Mod shop menu gameplay
-						// 3.1 = Drive to the meet
-						// 4.0 = Cutscene of dude walking over to you
-						// 4.4 = Cutscene of dude talking to you
-						// 4.6 = Wager placement menu
-						// 4.10 = Cutscene after placing wager
-						// 5.7 = dancing
-						// 6.1 = feedback cutscene
-						// 6.9 = cinematic cutscene with Kendl
-						// 7.0 = mission passed
-						var cv_stage = vars.GetWatcher("34@");
-						var cv_subStage = vars.GetWatcher("35@");
-						if (cv_subStage.Changed) {
-							switch((int)cv_stage.Current) {
-								case 1:
-									if (cv_subStage.Current == 1) {
-										return "cv_introCut";
-									}
-									break;
-								case 2:
-									if (cv_subStage.Current == 2) {
-										return "cv_arriveAtGarage";
-									}
-									if (cv_subStage.Current == 4) {
-										return "cv_cutsceneAtGarageStart";
-									}
-									if (cv_subStage.Current == 19) {
-										return "cv_cutsceneAtGarageEnd";
-									}
-									if (cv_subStage.Current == 20) {
-										return "cv_garageEnter";
-									}
-									break;
-								case 3:
-									if (cv_subStage.Current == 1) {
-										return "cv_garageExit";
-									}
-									break;
-								case 4:
-									if (cv_subStage.Current == 0) {
-										return "cv_danceCutStart";
-									}
-									if (cv_subStage.Current == 6) {
-										return "cv_danceCutEnd";
-									}
-									if (cv_subStage.Current == 10) {
-										return "cv_wagerPlaced";
-									}
-									break;
-								case 5:
-									if (cv_subStage.Current == 7) {
-										return "cv_danceStart";
-									}
-									break;
-								case 6:
-									if (cv_subStage.Current == 1) {
-										return "cv_feedbackStart";
-									}
-									if (cv_subStage.Current == 9) {
-										return "cv_endCinematicStart";
-									}
-									break;
+							// Stage:
+							// 1 - Intro cinematic + phonecall cutscene
+							// 2 - Drive to location
+							// 3 - Everybody killed, phonecall
+							// 4 - Find car
+							// 5 - Sweet gets in car cutscene
+							// 6 - Chase
+							// 7 - End cut
+							// 8 - Mission Passed
+							var sg_stage = vars.GetWatcher("127@");
+							if (sg_stage.Changed) {
+								switch ((int)sg_stage.Current) {
+									case 2:
+										return "sg_introCut";
+										break;
+									case 3:
+										return "sg_combatOver";
+										break;
+									case 4:
+										return "sg_findCar";
+										break;
+									case 5:
+										return "sg_carFound";
+										break;
+									case 6:
+										return "sg_chaseStart";
+										break;
+									case 7:
+										return "sg_chaseEnd";
+										break;
+								}
 							}
-						}
-						return;
-					};
-					vars.CheckSplit.Add(func_cv);
-				#endregion
-				#region Doberman
-					settings.Add("d", true, "Doberman", "LS_Sweet");
-					settings.SetToolTip("d", "See also: Specific gang territory Glen Park: GLN1");
-					settings.CurrentDefaultParent = "d";
-					settings.Add("d_marker", false, "Mission Marker Entered");
-					settings.Add("d_start", false, "Mission Started");
-					settings.Add("d_cut1", false, "Intro cutscenes over");
-					settings.Add("d_cut2", false, "Glen park cutscene over");
-					settings.Add("d_pass", true, "Mission Passed");
-
-					vars.significantThreads.Add("crash4", "d_start");
-					vars.missionNames.Add("Doberman","d_marker");
-
-					vars.watchScmGlobalVariables.Add(2414, "d_cut2");
-					vars.watchScmGlobalVariables.Add(2577, "d_cut1");
-
-					Func<string> func_d = () => {
-						if (!vars.ValidateMissionProgress("crash4", "ls_sweet_chain", 7, 8, "d_pass", "d")) {
 							return;
-						}
-						var d_cut1 = vars.GetWatcher("d_cut1");
-						if (d_cut1.Changed && d_cut1.Current == 1) {
-							return "d_cut1";
-						}
-						var d_cut2 = vars.GetWatcher("d_cut2");
-						if (d_cut2.Changed && d_cut2.Current == 1) {
-							return "d_cut2";
-						}
+						};
+						vars.CheckSplit.Add(func_sg);
+					#endregion
+					#region Cesar Vialpando
+						settings.Add("cv", true, "Cesar Vialpando", "LS_Sweet");
+						settings.CurrentDefaultParent = "cv";
+						settings.Add("cv_marker", false, "Mission Marker Entered");
+						settings.Add("cv_start", false, "Mission Started");
+						settings.Add("cv_introCut", false, "Intro cinematic end");
+						settings.Add("cv_arriveAtGarage", false, "Arriving at the mod shop");
+						settings.Add("cv_cutsceneAtGarageStart", false, "Cutscene at mod shop start");
+						settings.Add("cv_cutsceneAtGarageEnd", false, "Cutscene at mod shop end");
+						settings.Add("cv_garageEnter", false, "Mod shop entered");
+						settings.Add("cv_garageExit", false, "Mod shop exited");
+						settings.Add("cv_danceCutStart", false, "Arrival at the car meeting");
+						settings.Add("cv_danceCutEnd", false, "Start of the wager placement screen");
+						settings.Add("cv_wagerPlaced", false, "Wager placed");
+						settings.Add("cv_danceStart", false, "Dance start");
+						settings.Add("cv_feedbackStart", false, "Dance end");
+						settings.Add("cv_endCinematicStart", false, "Start of final cinematic");
+						settings.Add("cv_pass", true, "Mission Passed");
 
-						return;
-					};
-					vars.CheckSplit.Add(func_d);
-				#endregion
-				#region Los Sepulcros
-					settings.Add("ls", true, "Los Sepulcros", "LS_Sweet");
-					settings.CurrentDefaultParent = "ls";
-					settings.Add("ls_marker", false, "Mission Marker Entered");
-					settings.Add("ls_start", false, "Mission Started");
-					settings.Add("ls_pass", true, "Mission Passed");
+						vars.watchScmMissionLocalVariables.Add(34);
+						vars.watchScmMissionLocalVariables.Add(35);
 
-					vars.significantThreads.Add("sweet7", "ls_start");
-					vars.missionNames.Add("Los Sepulcros","ls_marker");
+						vars.significantThreads.Add("sweet6", "cv_start");
+						vars.missionNames.Add("Cesar Vialpando","cv_marker");
 
-					Func<string> func_ls = () => {
-						if (!vars.ValidateMissionProgress("sweet7", "ls_sweet_chain", 8, 9, "ls_pass", "ls")) {
+						Func<string> func_cv = () => {
+							if (!vars.ValidateMissionProgress("sweet6", "ls_sweet_chain", 6, 7, "cv_pass", "cv")) {
+								return;
+							}
+
+							// Stage.SubStage:
+							// 1.1 = Intro cutscene
+							// 1.2 = Fadein
+							// 2.0 = Drive
+							// 2.2 = Marker hit (fadeout)
+							// 2.4 = Cutscene of guy handing you car
+							// 2.19 = Gameplay, drive car into garage
+							// 2.20 = Mod shop menu gameplay
+							// 3.1 = Drive to the meet
+							// 4.0 = Cutscene of dude walking over to you
+							// 4.4 = Cutscene of dude talking to you
+							// 4.6 = Wager placement menu
+							// 4.10 = Cutscene after placing wager
+							// 5.7 = dancing
+							// 6.1 = feedback cutscene
+							// 6.9 = cinematic cutscene with Kendl
+							// 7.0 = mission passed
+							var cv_stage = vars.GetWatcher("34@");
+							var cv_subStage = vars.GetWatcher("35@");
+							if (cv_subStage.Changed) {
+								switch((int)cv_stage.Current) {
+									case 1:
+										if (cv_subStage.Current == 1) {
+											return "cv_introCut";
+										}
+										break;
+									case 2:
+										if (cv_subStage.Current == 2) {
+											return "cv_arriveAtGarage";
+										}
+										if (cv_subStage.Current == 4) {
+											return "cv_cutsceneAtGarageStart";
+										}
+										if (cv_subStage.Current == 19) {
+											return "cv_cutsceneAtGarageEnd";
+										}
+										if (cv_subStage.Current == 20) {
+											return "cv_garageEnter";
+										}
+										break;
+									case 3:
+										if (cv_subStage.Current == 1) {
+											return "cv_garageExit";
+										}
+										break;
+									case 4:
+										if (cv_subStage.Current == 0) {
+											return "cv_danceCutStart";
+										}
+										if (cv_subStage.Current == 6) {
+											return "cv_danceCutEnd";
+										}
+										if (cv_subStage.Current == 10) {
+											return "cv_wagerPlaced";
+										}
+										break;
+									case 5:
+										if (cv_subStage.Current == 7) {
+											return "cv_danceStart";
+										}
+										break;
+									case 6:
+										if (cv_subStage.Current == 1) {
+											return "cv_feedbackStart";
+										}
+										if (cv_subStage.Current == 9) {
+											return "cv_endCinematicStart";
+										}
+										break;
+								}
+							}
 							return;
-						}
-						return;
-					};
-					vars.CheckSplit.Add(func_ls);
-				#endregion
+						};
+						vars.CheckSplit.Add(func_cv);
+					#endregion
+					#region Doberman
+						settings.Add("d", true, "Doberman", "LS_Sweet");
+						settings.SetToolTip("d", "See also: Specific gang territory Glen Park: GLN1");
+						settings.CurrentDefaultParent = "d";
+						settings.Add("d_marker", false, "Mission Marker Entered");
+						settings.Add("d_start", false, "Mission Started");
+						settings.Add("d_cut1", false, "Intro cutscenes over");
+						settings.Add("d_cut2", false, "Glen park cutscene over");
+						settings.Add("d_pass", true, "Mission Passed");
+
+						vars.significantThreads.Add("crash4", "d_start");
+						vars.missionNames.Add("Doberman","d_marker");
+
+						vars.watchScmGlobalVariables.Add(2414, "d_cut2");
+						vars.watchScmGlobalVariables.Add(2577, "d_cut1");
+
+						Func<string> func_d = () => {
+							if (!vars.ValidateMissionProgress("crash4", "ls_sweet_chain", 7, 8, "d_pass", "d")) {
+								return;
+							}
+							var d_cut1 = vars.GetWatcher("d_cut1");
+							if (d_cut1.Changed && d_cut1.Current == 1) {
+								return "d_cut1";
+							}
+							var d_cut2 = vars.GetWatcher("d_cut2");
+							if (d_cut2.Changed && d_cut2.Current == 1) {
+								return "d_cut2";
+							}
+
+							return;
+						};
+						vars.CheckSplit.Add(func_d);
+					#endregion
+					#region Los Sepulcros
+						settings.Add("ls", true, "Los Sepulcros", "LS_Sweet");
+						settings.CurrentDefaultParent = "ls";
+						settings.Add("ls_marker", false, "Mission Marker Entered");
+						settings.Add("ls_start", false, "Mission Started");
+						settings.Add("ls_endCut", false, "Intro cinematic ended");
+						settings.Add("ls_homie1", false, "One homie recruited");
+						settings.Add("ls_homie2", false, "Two homies recruited");
+						settings.Add("ls_carGo", false, "All homies entered car");
+						settings.Add("ls_cemeteryArrive", false, "Arrival at the cemetery");
+						settings.Add("ls_wallClimbed", false, "Wall climbed");
+						settings.Add("ls_waitStart", false, "Start of waiting for Kane cutscene");
+						settings.Add("ls_waitEnd", false, "End of waiting for Kane cutscene");
+						settings.Add("ls_kaneDead", false, "Kane killed");
+						settings.Add("ls_escapeCar", false, "Escape vehicle entered");
+						settings.Add("ls_groveArrive", false, "Return to Grove Street");
+						settings.Add("ls_pass", true, "Mission Passed");
+
+						vars.significantThreads.Add("sweet7", "ls_start");
+						vars.missionNames.Add("Los Sepulcros","ls_marker");
+
+						vars.watchScmMissionLocalVariables.Add(53);	// sw7_missionprogress
+						vars.watchScmMissionLocalVariables.Add(55);	// sw7_nextprompt
+						vars.watchScmMissionLocalVariables.Add(261);	// sw7_groupsize
+						vars.watchScmMissionLocalVariables.Add(534);	// sw7_counter
+
+						Func<string> func_ls = () => {
+							if (!vars.ValidateMissionProgress("sweet7", "ls_sweet_chain", 8, 9, "ls_pass", "ls")) {
+								return;
+							}
+							var sw7_groupsize = vars.GetWatcher("261@");
+							if (sw7_groupsize.Changed) {
+								if (sw7_groupsize.Current == 1 && sw7_groupsize.Old == 0) {
+									return "ls_homie1";
+								}
+								else if (sw7_groupsize.Current == 2 && sw7_groupsize.Old == 1) {
+									return "ls_homie2";
+								}
+							}
+							var sw7_nextprompt = vars.GetWatcher("55@");
+							if (sw7_nextprompt.Changed) {
+								switch ((int)sw7_nextprompt.Current) {
+									case 3:
+										return "ls_endCut";
+										break;
+									case 20:
+										return "ls_carGo";
+										break;
+								}
+							}
+							var sw7_missionprogress = vars.GetWatcher("53@");
+							if (sw7_missionprogress.Changed) {
+								switch ((int)sw7_missionprogress.Current) {
+									case 1:
+										return "ls_cemeteryArrive";
+										break;
+									case 5:
+										return "ls_wallClimbed";
+										break;
+									case 6:
+										return "ls_waitStart";
+										break;
+									case 20:
+										return "ls_waitEnd";
+										break;
+									case 1352:
+										return "ls_kaneDead";
+										break;
+								}
+							}
+							var sw7_counter = vars.GetWatcher("534@");
+							if (sw7_counter.Changed) {
+								switch ((int)sw7_counter.Current) {
+									case 69:
+										return "ls_escapeCar";
+										break;
+									case 70:
+										return "ls_groveArrive";
+										break;
+								}
+							}
+							return;
+						};
+						vars.CheckSplit.Add(func_ls);
+					#endregion
 				#endregion
 				#region Smoke Chain
 					settings.Add("LS_Smoke", true, "Big Smoke", "LS");
@@ -1200,7 +1286,7 @@ startup {
 						settings.Add("wsott_marker", false, "Mission Marker Entered");
 						settings.Add("wsott_start", false, "Mission Started");
 						settings.Add("wsott_cutEnd", false, "Intro cinematic end");
-						settings.Add("wsott_chaseStart", false, "Start of the case");
+						settings.Add("wsott_chaseStart", false, "Start of the chase");
 						settings.Add("wsott_bikeEntered", false, "Sanchez mounted");
 						settings.Add("wsott_guy0", false, "Vagos member #1 killed");
 						settings.SetToolTip("wsott_guy0", "Front most");
@@ -1217,7 +1303,7 @@ startup {
 						settings.Add("wsott_pass", true, "Mission Passed");
 
 						vars.significantThreads.Add("smoke3", "wsott_start");
-						vars.missionNames.Add("Wrong Side of th","wsott_marker");
+						vars.missionNames.Add("Wrong Side of the Tracks","wsott_marker");
 
 						vars.watchScmMissionLocalVariables.Add(80);		// smoke_s3flag
 						vars.watchScmMissionLocalVariables.Add(87);		// mex1dead_s3flag
@@ -1273,7 +1359,7 @@ startup {
 					#endregion
 					#region Just Business
 						settings.Add("jb", true, "Just Business", "LS_Smoke");
-						settings.CurrentDefaultParent = "wsott";
+						settings.CurrentDefaultParent = "jb";
 						settings.Add("jb_marker", false, "Mission Marker Entered");
 						settings.Add("jb_start", false, "Mission Started");
 						settings.Add("jb_introCut", false, "Intro cinematic ended");
@@ -1418,7 +1504,7 @@ startup {
 						vars.watchScmMissionLocalVariables.Add(73);
 
 						vars.significantThreads.Add("music2","mdr_start");
-						vars.missionNames.Add("Madd Dogg's Rhym","mdr_marker");
+						vars.missionNames.Add("Madd Dogg's Rhymes","mdr_marker");
 
 						Func<string> func_mdr = () => {
 							if (!vars.ValidateMissionProgress("music2","ls_ogloc_chain",1,2,"mdr_pass", "mdr")) {
@@ -1492,7 +1578,7 @@ startup {
 						vars.watchScmMissionLocalVariables.Add(160);
 
 						vars.significantThreads.Add("music3", "mi_start");
-						vars.missionNames.Add("Management Issue","mi_marker");
+						vars.missionNames.Add("Management Issues","mi_marker");
 
 						Func<string> func_mi = () => {
 							if (!vars.ValidateMissionProgress("music3","ls_ogloc_chain",2,3,"mi_pass", "mi")) {
@@ -1576,12 +1662,12 @@ startup {
 						vars.watchScmMissionLocalVariables.Add(80);	// music5_goals
 
 						Func<string> func_hp = () => {
-							var mission_chain = vars.GetWatcher("ls_ogloc_chain");
-							if (mission_chain.Current >= 3 && mission_chain.Current < 5) {
-								var thread = vars.GetWatcher("thread");
-								if (thread.Changed) {
-									if (thread.Current == "music5") {
-										return mission_chain.Current == 3 ? "hp1_start" : "hp2_start";
+							var ls_ogloc_chain = vars.GetWatcher("ls_ogloc_chain");
+							if (ls_ogloc_chain.Current >= 3 && ls_ogloc_chain.Current < 5) {
+								var hp_thread = vars.GetWatcher("thread");
+								if (hp_thread.Changed) {
+									if (hp_thread.Current == "music5") {
+										return ls_ogloc_chain.Current == 3 ? "hp1_start" : "hp2_start";
 									}
 								}
 							}
@@ -1589,12 +1675,12 @@ startup {
 							if (vars.lastStartedMission != "music5") {
 								return;
 							}
-							if (mission_chain.Changed) {
-								if (mission_chain.Current >= 3) {
-									if (mission_chain.Old == 3) {
+							if (ls_ogloc_chain.Changed) {
+								if (ls_ogloc_chain.Current >= 3) {
+									if (ls_ogloc_chain.Old == 3) {
 										vars.TrySplit("hp1_pass");
 									}
-									else if (mission_chain.Old == 4) {
+									else if (ls_ogloc_chain.Old == 4) {
 										vars.TrySplit("hp2_pass");
 									}
 								}
@@ -1738,6 +1824,53 @@ startup {
 						};
 						vars.CheckSplit.Add(func_bd);
 					#endregion
+					#region Gray Imports
+						settings.Add("gi", true, "Gray Imports", "LS_Crash");
+						settings.CurrentDefaultParent = "gi";
+						settings.Add("gi_marker", false, "Mission Marker Entered");
+						settings.Add("gi_start", false, "Mission Started");
+						settings.Add("gi_cutSkip", false, "Intro cinematic ended");
+						settings.Add("gi_compoundArrive", false, "Red marker at compound entered");
+						settings.Add("gi_compoundGo", false, "Cutscene showing the compound ended");
+						settings.Add("gi_lock", false, "Padlock destroyed");
+						settings.Add("gi_office", false, "Office entered");
+						settings.Add("gi_pass", true, "Mission Passed");
+
+						vars.significantThreads.Add("drugs3","gi_start");
+						vars.missionNames.Add("Gray Imports","gi_marker");
+
+						vars.watchScmMissionLocalVariables.Add(141);	// crash_c3flag
+						vars.watchScmMissionLocalVariables.Add(173);	// tolotov_c3flag
+
+						Func<string> func_gi = () => {
+							if (!vars.ValidateMissionProgress("drugs3", "ls_crash_chain", 1, 2, "gi_pass", "gi")) {
+								return;
+							}
+							var crash_c3flag = vars.GetWatcher("141@");
+							if (crash_c3flag.Changed) {
+								switch ((int)crash_c3flag.Current) {
+									case 1:
+										return "gi_cutSkip";
+										break;
+									case 3:
+										return "gi_compoundArrive";
+										break;
+									case 8:
+										return "gi_compoundGo";
+										break;
+									case 11:
+										return "gi_lock";
+										break;
+								}
+							}
+							var tolotov_c3flag = vars.GetWatcher("173@");
+							if (tolotov_c3flag.Changed && tolotov_c3flag.Current == 3) {
+								return "gi_office";
+							}
+							return;
+						};
+						vars.CheckSplit.Add(func_gi);
+					#endregion
 				#endregion
 				#region Ryder Chain
 					settings.Add("LS_Ryder", true, "Ryder", "LS");
@@ -1795,7 +1928,6 @@ startup {
 						vars.watchScmMissionLocalVariables.Add(88);		// ryd1_clothes_changed
 						vars.watchScmMissionLocalVariables.Add(95);		// ryd1_inside_house_flag
 						vars.watchScmMissionLocalVariables.Add(254);	// ryd1_audio_counter
-
 
 						Func<string> func_hi = () => {
 							if (!vars.ValidateMissionProgress("guns1", "ls_ryder_chain", 0, 1, "hi_pass", "hi")) {
@@ -1864,62 +1996,1037 @@ startup {
 						};
 						vars.CheckSplit.Add(func_hi);
 					#endregion
+					#region Catalyst
+						settings.Add("c", true, "Catalyst", "LS_Ryder");
+						settings.CurrentDefaultParent = "c";
+						settings.Add("c_marker", false, "Mission Marker Entered");
+						settings.Add("c_start", false, "Mission Started");
+						settings.Add("c_cutEnd", false, "Intro cutscenes ended");
+						settings.Add("c_trainApproach", false, "Approaching the train");
+						settings.Add("c_trainArrive", false, "Ryder gets out of the car");
+						settings.Add("c_vagosDead", false, "Vagos enemies killed");
+						settings.Add("c_ballasArrive", false, "Arrival of the Ballas cutscene");
+						settings.Add("c_ballasDead", false, "Ballas enemies killed");
+						settings.Add("c_throwCrates", false, "Start of crate throwing");
+						settings.Add("c_crate1", false, "1st crate caught");
+						settings.Add("c_crate2", false, "2nd crate caught");
+						settings.Add("c_crate3", false, "3rd crate caught");
+						settings.Add("c_crate4", false, "4th crate caught");
+						settings.Add("c_crate5", false, "5th crate caught");
+						settings.Add("c_crate6", false, "6th crate caught");
+						settings.Add("c_crate7", false, "7th crate caught");
+						settings.Add("c_crate8", false, "8th crate caught");
+						settings.Add("c_crate9", false, "9th crate caught");
+						settings.Add("c_crate10", false, "10th crate caught");
+						settings.Add("c_cratesCaught", false, "All crates caught");
+						settings.Add("c_offTrain", false, "Train deboarded");
+						settings.Add("c_spray", false, "Car resprayed");
+						settings.Add("c_pass", true, "Mission Passed");
+
+						vars.significantThreads.Add("ryder3", "c_start");
+						vars.missionNames.Add("Catalyst", "c_marker");
+
+						vars.watchScmMissionLocalVariables.Add(82);		// r3_crate_cnt
+						vars.watchScmMissionLocalVariables.Add(89);		// r3_mission_flag
+						vars.watchScmMissionLocalVariables.Add(103);	// r3_car_been_sprayed
+
+						Func<string> func_c = () => {
+							if (!vars.ValidateMissionProgress("ryder3", "ls_ryder_chain", 1, 2, "c_pass", "c")) {
+								return;
+							}
+							var r3_mission_flag = vars.GetWatcher("89@");
+							if (r3_mission_flag.Changed) {
+								switch ((int)r3_mission_flag.Current) {
+									case 1:
+										return "c_cutEnd";
+										break;
+									case 2:
+										return "c_trainApproach";
+										break;
+									case 3:
+										return "c_trainArrive";
+										break;
+									case 6:
+										return "c_vagosDead";
+										break;
+									case 7:
+										return "c_ballasArrive";
+										break;
+									case 9:
+										return "c_ballasDead";
+										break;
+									case 10:
+										return "c_throwCrates";
+										break;
+									case 11:
+										vars.TrySplit("c_cratesCaught");
+										break;
+									case 36:
+										return "c_offTrain";
+										break;
+								}
+							}
+							var r3_crate_cnt = vars.GetWatcher("82@");
+							if (r3_crate_cnt.Changed) {
+								// Loop in case multiple crates are caught simultaneously
+								for (int i = r3_crate_cnt.Old; i < r3_crate_cnt.Current; i++) {
+									vars.TrySplit("c_crate" + (i+1));
+								}
+							}
+							var r3_car_been_sprayed = vars.GetWatcher("103@");
+							if (r3_car_been_sprayed.Changed && r3_car_been_sprayed.Current == 1) {
+								return "c_spray";
+							}
+							return;
+						};
+						vars.CheckSplit.Add(func_c);
+					#endregion
+					#region Robbing Uncle Sam
+						settings.Add("rus", true, "Robbing Uncle Sam", "LS_Ryder");
+						settings.CurrentDefaultParent = "rus";
+						settings.Add("rus_marker", false, "Mission Marker Entered");
+						settings.Add("rus_start", false, "Mission Started");
+
+						settings.Add("rus_endCut", false, "Intro cinematic ended");
+						settings.Add("rus_vanEntered", false, "Van entered at Grove Street");
+						settings.Add("rus_compoundArrive", false, "Arrival at the compound");
+						settings.Add("rus_compoundEntry", false, "Start of infiltration");
+						settings.Add("rus_gate1", false, "Gate opened");
+						settings.Add("rus_gate2", false, "Garage door opened");
+						settings.Add("rus_box1", false, "Box 1 loaded");
+						settings.Add("rus_box2", false, "Box 2 loaded");
+						settings.Add("rus_box3", false, "Box 3 loaded");
+						settings.Add("rus_box4", false, "Box 4 loaded");
+						settings.Add("rus_box5", false, "Box 5 loaded");
+						settings.Add("rus_box6", false, "Box 6 loaded");
+						settings.Add("rus_lastBox", false, "Last box entered");
+						settings.Add("rus_vanReentered", false, "Van entered after loading boxes");
+						settings.Add("rus_emmett", false, "Arrival at Emmett's");
+						settings.Add("rus_pass", true, "Mission Passed");
+
+						vars.significantThreads.Add("ryder2", "rus_start");
+						vars.missionNames.Add("Robbing Uncle Sam", "rus_marker");
+
+						vars.watchScmMissionLocalVariables.Add(34);	// m_stage
+						vars.watchScmMissionLocalVariables.Add(35); // m_goals
+						vars.watchScmMissionLocalVariables.Add(127); // loaded_boxes
+
+						Func<string> func_rus = () => {
+							if (!vars.ValidateMissionProgress("ryder2", "ls_ryder_chain", 2, 3, "rus_pass", "rus")) {
+								return;
+							}
+							var rus_stage = vars.GetWatcher("34@");
+							var rus_goals = vars.GetWatcher("35@");
+							if (rus_goals.Changed) {
+								switch ((int)rus_stage.Current) {
+									case 1:
+										if (rus_goals.Current == 1) {
+											return "rus_endCut";
+										}
+										if (rus_goals.Current == 3) {
+											return "rus_vanEntered";
+										}
+										break;
+									case 2:
+										if (rus_goals.Current == 1) {
+											return "rus_compoundArrive";
+										}
+										break;
+									case 3:
+										if (rus_goals.Current == 1) {
+											return "rus_compoundEntry";
+										}
+										break;
+									case 4:
+										if (rus_goals.Current == 0) {
+											return "rus_gate1";
+										}
+										if (rus_goals.Current == 4) {
+											return "rus_gate2";
+										}
+										break;
+									case 6:
+										if (rus_goals.Current == 2) {
+											return "rus_lastBox";
+										}
+										if (rus_goals.Current == 8) {
+											return "rus_vanReentered";
+										}
+										if (rus_goals.Current == 99) {
+											return "rus_emmett";
+										}
+										break;
+								}
+							}
+
+							var rus_boxes = vars.GetWatcher("127@");
+							if (rus_boxes.Changed && rus_boxes.Current > rus_boxes.Old) {
+								return "rus_box" + rus_boxes.Current;
+							}
+							return;
+						};
+						vars.CheckSplit.Add(func_rus);
+					#endregion
 				#endregion
 				#region Cesar Chain
 					settings.Add("LS_Cesar", true, "Cesar", "LS");
 					// 1: High Stakes, Low-Rider
 					vars.watchScmGlobalVariables.Add(457, "ls_cesar_chain");	// $MISSION_LOWRIDER_PASSED
-				#region High Stakes, Low-Rider
-					settings.Add("hslr", true, "High Stakes, Low-Rider", "LS_Cesar");
-					settings.SetToolTip("hslr", "See also 'Lowrider Race' in Side Missions -> Races section.");
-					settings.CurrentDefaultParent = "hslr";
-					settings.Add("hslr_marker", false, "Mission Marker Entered");
-					settings.Add("hslr_start", false, "Mission Started");
-					settings.Add("hslr_cutEnd", false, "Intro cutscenes ended");
-					settings.Add("hslr_raceStart", false, "Race started");
-					settings.Add("hslr_pass", true, "Mission Passed");
+					#region High Stakes, Low-Rider
+						settings.Add("hslr", true, "High Stakes, Low-Rider", "LS_Cesar");
+						settings.SetToolTip("hslr", "See also 'Lowrider Race' in Side Missions -> Races section.");
+						settings.CurrentDefaultParent = "hslr";
+						settings.Add("hslr_marker", false, "Mission Marker Entered");
+						settings.Add("hslr_start", false, "Mission Started");
+						settings.Add("hslr_cutEnd", false, "Intro cutscenes ended");
+						settings.Add("hslr_raceStart", false, "Race started");
+						settings.Add("hslr_pass", true, "Mission Passed");
 
-					vars.significantThreads.Add("cesar1","hslr_start");
-					vars.missionNames.Add("High Stakes, Low","hslr_marker");
+						vars.significantThreads.Add("cesar1","hslr_start");
+						vars.missionNames.Add("High Stakes, Low-Rider","hslr_marker");
 
-					vars.watchScmGlobalVariables.Add(2336, "hslr_raceStart");
+						vars.watchScmGlobalVariables.Add(2336, "hslr_raceStart");
 
-					vars.watchScmMissionLocalVariables.Add(34);
+						vars.watchScmMissionLocalVariables.Add(34);
 
-					Func<string> func_hslr = () => {
-						var ls_cesar_chain = vars.GetWatcher("ls_cesar_chain");
-						if (ls_cesar_chain.Current >= 1) {
-							if (ls_cesar_chain.Changed && ls_cesar_chain.Old == 0) {
-								return "hslr_pass";
+						Func<string> func_hslr = () => {
+							var ls_cesar_chain = vars.GetWatcher("ls_cesar_chain");
+							if (ls_cesar_chain.Current >= 1) {
+								if (ls_cesar_chain.Changed && ls_cesar_chain.Old == 0) {
+									return "hslr_pass";
+								}
+								return;
+							}
+							var hslr_raceStart = vars.GetWatcher("hslr_raceStart");
+							if (hslr_raceStart.Changed && hslr_raceStart.Current == 2) {
+								return "hslr_raceStart";
+							}
+							if (vars.lastStartedMission != "cesar1") {
+								return;
+							}
+							var hslr_cutEnd = vars.GetWatcher("34@");
+							if (hslr_cutEnd.Changed && hslr_cutEnd.Current == 1) {
+								return "hslr_cutEnd";
 							}
 							return;
-						}
-						var hslr_raceStart = vars.GetWatcher("hslr_raceStart");
-						if (hslr_raceStart.Changed && hslr_raceStart.Current == 2) {
-							return "hslr_raceStart";
-						}
-						if (vars.lastStartedMission != "cesar1") {
-							return;
-						}
-						var hslr_cutEnd = vars.GetWatcher("34@");
-						if (hslr_cutEnd.Changed && hslr_cutEnd.Current == 1) {
-							return "hslr_cutEnd";
-						}
-						return;
-					};
-					vars.CheckSplit.Add(func_hslr);
+						};
+						vars.CheckSplit.Add(func_hslr);
+					#endregion
 				#endregion
-				#endregion
-				settings.Add("LS_Final", true, "Finale", "LS");
-				vars.watchScmGlobalVariables.Add(458, "ls_final_chain");	// $LS_FINAL_TOTAL_PASSED_MISSIONS
+				#region Final Chain
+					settings.Add("LS_Final", true, "Finale", "LS");
+					// 1: Reuniting the Families
+					// 2: The Green Sabre
+					vars.watchScmGlobalVariables.Add(458, "ls_final_chain");	// $LS_FINAL_TOTAL_PASSED_MISSIONS
+					#region Reuniting the Families
+						settings.Add("rtf", true, "Reuniting the Families", "LS_Final");
+						settings.CurrentDefaultParent = "rtf";
+						settings.Add("rtf_marker", false, "Mission Marker Entered");
+						settings.Add("rtf_start", false, "Mission Started");
+						settings.Add("rtf_carEnter", false, "Sweet's car entered at Grove Street");
+						settings.Add("rtf_motelMarker", false, "Arrival at the motel marker");
+						settings.Add("rtf_motelCutscene", false, "Cutscene in front of motel started");
+						settings.Add("rtf_motelOutside", false, "Cutscene in front of motel ended");
+						settings.Add("rtf_motelEntered", false, "Motel entered");
+						settings.Add("rtf_intStair", false, "Climbing the stairs in the motel");
+						settings.Add("rtf_intCorner1", false, "Start of the first long corridor");
+						settings.Add("rtf_intHall1", false, "End of the first long corridor");
+						settings.Add("rtf_intCorridor1", false, "End of the second long corridor");
+						settings.Add("rtf_intCorridor2", false, "Start of the third long corridor");
+						settings.Add("rtf_intSweet", false, "Reunited with Sweet");
+						settings.Add("rtf_roofStart", false, "Exited motel (in cutscene)");
+						settings.Add("rtf_roofPlay", false, "Combat gameplay vs helicopter start");
+						settings.Add("rtf_heliDead", false, "Helicopter killed");
+						settings.Add("rtf_chase", false, "Chase sequence started");
+						settings.Add("rtf_pass", true, "Mission Passed");
 
+						vars.significantThreads.Add("drugs4", "rtf_start");
+						vars.missionNames.Add("Reuniting the Families", "rtf_marker");
+
+						vars.watchScmMissionLocalVariables.Add(106);
+						vars.watchScmMissionLocalVariables.Add(128);
+						vars.watchScmMissionLocalVariables.Add(171);
+
+						Func<string> func_rtf = () => {
+							if (!vars.ValidateMissionProgress("drugs4", "ls_final_chain", 0, 1, "rtf_pass", "rtf")) {
+								return;
+							}
+							var rtf_act1 = vars.GetWatcher("128@");
+							if (rtf_act1.Changed) {
+								switch ((int)rtf_act1.Current) {
+									case 1:
+										return "rtf_carEnter";
+										break;
+									case 2:
+										return "rtf_motelMarker";
+										break;
+									case 3:
+										return "rtf_motelCutscene";
+										break;
+									case 24:
+										return "rtf_motelOutside";
+										break;
+									case 25:
+										return "rtf_motelEntered";
+										break;
+								}
+							}
+							// Audio lines:
+							// 15863: Where the OGs at, I gotta get my brother
+							// 15864: GO GO GO
+							// 15866: Families, cops coming in from behind
+							// 15807: Get some suppressing fire in here
+							// 15818: Unit down, unit down.
+							var rtf_act2 = vars.GetWatcher("106@");
+							if (rtf_act2.Changed) {
+								switch ((int)rtf_act2.Current) {
+									case 15863:
+										return "rtf_intStair";
+										break;
+									case 15864:
+										return "rtf_intCorner1";
+										break;
+									case 15866:
+										return "rtf_intHall1";
+										break;
+									case 15807:
+										return "rtf_intCorridor1";
+										break;
+									case 15818:
+										return "rtf_intCorridor2";
+										break;
+								}
+							}
+							var rtf_act3 = vars.GetWatcher("171@");
+							if (rtf_act3.Changed) {
+								if (rtf_act3.Current == 21 || rtf_act3.Current == 22 && rtf_act3.Old < 21) {
+									return "rtf_heliDead";
+								}
+								switch ((int)rtf_act3.Current) {
+									case 2:
+										return "rtf_intSweet";
+										break;
+									case 6:
+										return "rtf_roofStart";
+										break;
+									case 11:
+										return "rtf_roofPlay";
+										break;
+									case 23:
+										return "rtf_chase";
+										break;
+								}
+							}
+							return;
+						};
+						vars.CheckSplit.Add(func_rtf);
+					#endregion
+					#region The Green Sabre
+						vars.RegisterMissionBasics("tgs","The Green Sabre","la1fin2","LS_Final");
+						
+						settings.Add("tgs_startCut", false, "Intro cutscenes ended");
+						settings.Add("tgs_bravuraEnter", false, "Bravura entered");
+						settings.Add("tgs_bravuraExit", false, "After cinematic with Cesar");
+						settings.Add("tgs_parkingArrive", false, "Arrival at the parking lot");
+						settings.Add("tgs_parkingShootStart", false, "Start of the shootout");
+						settings.Add("tgs_parkingShootEnd", false, "End of the shootout");
+						settings.Add("tgs_endCut", false, "Start of the Badlands cinematic");
+						settings.Add("tgs_pass", true, "Mission Passed");
+
+						vars.watchScmMissionLocalVariables.Add(100);
+
+						Func<string> func_tgs = () => {
+							if (!vars.ValidateMissionProgress("la1fin2", "ls_final_chain", 1, 2, "tgs_pass", "tgs")) {
+								return;
+							}
+							// 1 = Initial cutscene
+							// 2 = Cesar's phone call
+							// 3 = Entered Bravura
+							// 4 = Exiting Bravura
+							// 5 = Sweet Dying Cutscene
+							// 6 = Combat
+							// 7 = Cops arrive at the parking lot
+							// 8 = You got a bag over your head boy
+							var tgs_chapter = vars.GetWatcher("100@");
+							if (tgs_chapter.Current > tgs_chapter.Old) {
+								switch ((int)tgs_chapter.Current) {
+									case 2:
+										vars.TrySplit("tgs_startCut");
+										break;
+									case 3:
+										vars.TrySplit("tgs_bravuraEnter");
+										break;
+									case 4:
+										vars.TrySplit("tgs_bravuraExit");
+										break;
+									case 5:
+										vars.TrySplit("tgs_parkingArrive");
+										break;
+									case 6:
+										vars.TrySplit("tgs_parkingShootStart");
+										break;
+									case 7:
+										vars.TrySplit("tgs_parkingShootEnd");
+										break;
+									case 8:
+										vars.TrySplit("tgs_endCut");
+										break;
+									default:
+										break;
+								}
+							}
+							return;
+						};
+						vars.CheckSplit.Add(func_tgs);
+					#endregion
+				#endregion
+			#endregion
+			#region Badlands
+				settings.Add("BL", true, "Badlands", "Missions");
+				#region Trailer Park
+					// Combine Badlands and King in Exile into one even though they are
+					// technically separate chains
+					settings.Add("BL_Intro", true, "Trailer Park", "BL");
+					#region Badlands
+						vars.watchScmGlobalVariables.Add(493, "bl_intro_chain");	// $MISSION_BADLANDS_PASSED
+						vars.RegisterMissionBasics("bl","Badlands","bcrash1","BL_Intro");
+						
+						settings.Add("bl_base", false, "Mountain base marker reached");
+						settings.Add("bl_cabinStart", false, "Start of cutscene showing the cabin");
+						settings.Add("bl_cabinEnd", false, "End of cutscene showing the cabin");
+						settings.Add("bl_reporterDead", false, "Reporter killed");
+						settings.Add("bl_photo", false, "Photograph taken");
+						settings.Add("bl_pass", true, "Mission Passed");
+
+						vars.watchScmGlobalVariables.Add(2208, "bl_tripSkipUnlocked");
+						vars.watchScmGlobalVariables.Add(6965, "bl_chapter");
+
+						Func<string> func_bl = () => {
+							if (!vars.ValidateMissionProgress("bcrash1", "bl_intro_chain", 0, 1, "bl_pass", "bl")) {
+								return;
+							}
+							var bl_chapter = vars.GetWatcher("bl_chapter");
+							// -1: Mission start
+							// 0: Mountain base marker reached
+							// 1: Cabin cutscene finished
+							// 2: ?
+							// 3: Reporter fleeing to car / car driving away cutscene
+							// 4: Car chase
+							// 5: Car on fire, reporter fleeing on foot
+							// 6: Car exploded, reporter still alive
+							// 7: Reporter dead
+							// 8: Photograph taken
+							if (bl_chapter.Changed) {
+								switch ((int)bl_chapter.Current) {
+									case 0:
+										if (bl_chapter.Old == -1) {
+											return "bl_base";
+										}
+										break;
+									case 1:
+										return "bl_cabinEnd";
+										break;
+									case 7:
+										return "bl_reporterDead";
+										break;
+									case 8:
+										return "bl_photo";
+										break;
+								}
+							}
+							var bl_tripSkipUnlocked = vars.GetWatcher("bl_tripSkipUnlocked");
+							if (bl_tripSkipUnlocked.Changed && bl_tripSkipUnlocked.Current == 1) {
+								return "bl_cabinStart";
+							}
+							return;
+						};
+						vars.CheckSplit.Add(func_bl);
+					#endregion
+					#region King In Exile
+						vars.watchScmGlobalVariables.Add(2163, "bl_kie_chain");
+						vars.RegisterMissionBasics("kie","King In Exile","catcut","BL_Intro");
+						
+						settings.Add("kie_phoneCall", false, "Cutscene ended");
+						settings.Add("kie_pass", true, "Mission Passed");
+
+						vars.watchScmMissionLocalVariables.Add(38);
+
+						Func<string> func_kie = () => {
+							if (!vars.ValidateMissionProgress("catcut", "bl_kie_chain", 0, 1, "kie_pass", "kie")) {
+								return;
+							}
+							var kie_phoneCall = vars.GetWatcher("38@");
+							if (kie_phoneCall.Changed && kie_phoneCall.Current == 7) {
+								return "kie_phoneCall";
+							}
+							return;
+						};
+						vars.CheckSplit.Add(func_kie);
+					#endregion
+				#endregion
+				#region Catalina
+					settings.Add("BL_Catalina", true, "Catalina", "BL");
+					
+					vars.watchScmGlobalVariables.Add(64, "catalina_count");	// $CATALINA_TOTAL_PASSED_MISSIONS
+					#region Mission Picker
+						settings.Add("catDate", false, "Dates", "BL_Catalina");
+						settings.Add("fd", false, "First Date", "catDate");
+						settings.Add("fb", false, "First Base", "catDate");
+						settings.Add("gc", false, "Gone Courting", "catDate");
+						settings.Add("mih", false, "Made In Heaven", "catDate");
+						settings.Add("fd_marker", false, "Mission Marker Entered", "fd");
+						settings.Add("fb_marker", false, "Mission Marker Entered", "fb");
+						settings.Add("gc_marker", false, "Mission Marker Entered", "gc");
+						settings.Add("mih_marker", false, "Mission Marker Entered", "mih");
+						settings.Add("fd_start", false, "Mission Started", "fd");
+						settings.Add("fb_start", false, "Mission Started", "fb");
+						settings.Add("gc_start", false, "Mission Started", "gc");
+						settings.Add("mih_start", false, "Mission Started", "mih");
+						
+						vars.missionNames.Add("First Date", "fd_marker");
+						vars.missionNames.Add("First Base", "fb_marker");
+						vars.missionNames.Add("Gone Courting", "gc_marker");
+						vars.missionNames.Add("Made In Heaven", "mih_marker");
+
+						vars.significantThreads.Add("catalin", "");
+
+						Func<string> func_catDate = () => {
+							var catalina_count = vars.GetWatcher("catalina_count");
+							if (catalina_count.Current >= 4) {
+								return;
+							}
+							var thread = vars.GetWatcher("thread");
+							if (thread.Changed) {
+								if (thread.Old == "audiol") {
+									return;
+								}
+								if (thread.Current == "catalin") {
+									switch ((int)catalina_count.Current) {
+										case 0:
+											return "fd_start";
+											break;
+										case 1:
+											return "fb_start";
+											break;
+										case 2:
+											return "gc_start";
+											break;
+										case 3:
+											return "mih_start";
+											break;
+									}
+								}
+							}
+							return;
+						};
+						vars.CheckSplit.Add(func_catDate);
+					#endregion
+					#region Tanker Commander
+						vars.watchScmGlobalVariables.Add(716, "tc_pass");		// $MISSION_TANKER_COMMANDER_PASSED
+						vars.RegisterMissionBasics("tc","Tanker Commander","cat3","BL_Catalina");
+
+						settings.Add("tc_introCut", false, "Intro cinematic ended");
+						settings.Add("tc_tankerEnter", false, "Tanker entered");
+						settings.Add("tc_trailer", false, "Trailer coupled");
+						settings.Add("tc_chaseStart", false, "Chase start");
+						settings.Add("tc_arrive", false, "Arrival at trucking compound");
+						settings.Add("tc_pass", true, "Mission Passed");
+
+						vars.watchScmMissionLocalVariables.Add(35);
+
+						Func<string> func_tc = () => {
+							if (!vars.ValidateMissionProgress("cat3", "tc_pass", 0, 1, "tc_pass", "tc")) {
+								return;
+							}
+							var tc_stage = vars.GetWatcher("35@");
+							if (!tc_stage.Changed) {
+								return;
+							}
+							switch ((int)tc_stage.Current) {
+								case 1:
+									return "tc_introCut";
+									break;
+								case 2:
+									return "tc_tankerEnter";
+									break;
+								case 3:
+									return "tc_trailer";
+									break;
+								case 4:
+									return "tc_chaseStart";
+									break;
+								case 5:
+									return "tc_arrive";
+									break;
+							}
+							return;
+						};
+						vars.CheckSplit.Add(func_tc);
+					#endregion
+					#region Small Town Bank
+						vars.watchScmGlobalVariables.Add(715, "stb_pass");	// $MISSION_SMALL_TOWN_BANK_PASSED
+						vars.RegisterMissionBasics("stb","Small Town Bank","cat2","BL_Catalina");
+
+						settings.Add("tgs_hostageSituationStart", false, "Start of crowd control");
+						settings.Add("tgs_alarmGoingOff", false, "Alarm going off");
+						settings.Add("tgs_alarmFade", false, "Fade to black after alarm");
+						settings.Add("tgs_startOfRobbery", false, "Start of ATM shooting segment");
+						settings.Add("machine0_1", false, "Right machine shot once");
+						settings.Add("machine0_2", false, "Right machine shot twice");
+						settings.Add("machine0_3", false, "Right machine money picked up");
+						settings.Add("machine1_1", false, "Left machine shot once");
+						settings.Add("machine1_2", false, "Left machine shot twice");
+						settings.Add("machine1_3", false, "Left machine money picked up");
+						settings.Add("machine2_1", false, "Back machine shot once");
+						settings.Add("machine2_2", false, "Back machine shot twice");
+						settings.Add("machine2_3", false, "Back machine money picked up");
+						settings.Add("tgs_allMoneyPicked", false, "All money picked up");
+						settings.Add("stb_catalinaExit", false, "Catalina exited the building");
+						settings.Add("tgs_alleyTraversed", false, "Alley traversed");
+						settings.Add("tgs_bikerCopsArrived", false, "Biker cops arrived");
+						settings.Add("tgs_bikerCopsDead", false, "Biker cops killed");
+						settings.Add("tgs_chaseStart", false, "Start of chase");
+						settings.Add("stb_catalinaRescueStart", false, "Catalina runs to get on CJ's bike");
+						settings.Add("stb_catalinaRescueEnd", false, "Catalina mounted CJ's bike");
+						settings.Add("stb_pass", true, "Mission Passed");
+						
+						vars.watchScmMissionLocalVariables.Add(41);
+						vars.watchScmMissionLocalVariables.Add(97);
+						vars.watchScmMissionLocalVariables.Add(98);
+						vars.watchScmMissionLocalVariables.Add(99);
+						vars.watchScmMissionLocalVariables.Add(344);
+						vars.watchScmMissionLocalVariables.Add(362);
+						vars.watchScmMissionLocalVariables.Add(366);
+
+						Func<string> func_stb = () => {
+							if (!vars.ValidateMissionProgress("cat2", "stb_pass", 0, 1, "stb_pass", "stb")) {
+								return;
+							}
+
+							var stb_chapter = vars.GetWatcher("41@");
+							if (stb_chapter.Current > stb_chapter.Old) {
+								switch ((int)stb_chapter.Current) {
+									case 10:
+										vars.TrySplit("tgs_hostageSituationStart");
+										break;
+									case 12:
+										vars.TrySplit("tgs_alarmGoingOff");
+										break;
+									case 13:
+										vars.TrySplit("tgs_alarmFade");
+										break;
+									case 26:
+										vars.TrySplit("tgs_startOfRobbery");
+										break;
+									case 29:
+										vars.TrySplit("tgs_allMoneyPicked");
+										break;
+									case 32:
+										vars.TrySplit("tgs_alleyTraversed");
+										break;
+									case 35:
+										vars.TrySplit("tgs_bikerCopsArrived");
+										break;
+									case 37:
+										vars.TrySplit("tgs_bikerCopsDead");
+										break;
+									case 42:
+										vars.TrySplit("tgs_chaseStart");
+										break;
+								}
+							}
+							for (int i = 0; i < 3; i++) {
+								var stb_machine = vars.GetWatcher((i+97)+"@");
+								if (stb_machine.Changed && stb_machine.Current > 0) {
+									if (stb_machine.Old == 1 && stb_machine.Current == 3) {
+										vars.TrySplit("machine"+i+"_2");
+									}
+									return "machine"+i+"_"+stb_machine.Current;
+								}
+							}
+							var stb_catalinaExit = vars.GetWatcher("344@");
+							if (stb_catalinaExit.Changed && stb_catalinaExit.Current == 1) {
+								// This variable keeps track of Catalina's progression through the alleyway,
+								return "stb_catalinaExit";
+							}
+							var stb_catalinaRescueStart = vars.GetWatcher("362@");
+							if (stb_catalinaRescueStart.Changed && stb_catalinaRescueStart.Current == 8) {
+								return "stb_catalinaRescueStart";
+							}
+							var stb_catalinaRescueEnd = vars.GetWatcher("366@");
+							if (stb_catalinaRescueEnd.Changed && stb_catalinaRescueEnd.Current == 1) {
+								return "stb_catalinaRescueEnd";
+							}
+
+							return;
+						};
+						vars.CheckSplit.Add(func_stb);
+					#endregion
+					#region Local Liquor Store
+						vars.watchScmGlobalVariables.Add(714, "lls_pass"); // $MISSION_LOCAL_LIQUOR_STORE_PASSED
+						vars.RegisterMissionBasics("lls","Local Liquor Store","cat1","BL_Catalina");
+
+						settings.Add("lls_cutsceneEnd", false, "Cutscene ended");
+						settings.Add("lls_guyDead1", false, "First biker shot (Plaid jacket twin)");
+						settings.Add("lls_guyDead2", false, "Second biker shot (Shirtless guy)");
+						settings.Add("lls_guyDead3", false, "Third biker shot (Plaid jacket twin)");
+						settings.Add("lls_pickupsGrabbed1", false, "One briefcase grabbed");
+						settings.Add("lls_pickupsGrabbed2", false, "Two briefcases grabbed");
+						settings.Add("lls_pickupsGrabbed3", false, "All three briefcases grabbed");
+						settings.Add("lls_endMarker", false, "End marker entered");
+						settings.Add("lls_endCutStart", false, "End cutscene started");
+						settings.Add("lls_endCutCatalinaWalk", false, "Catalina done talking");
+						settings.Add("lls_pass", true, "Mission Passed");
+
+						vars.watchScmMissionLocalVariables.Add(34);
+						vars.watchScmMissionLocalVariables.Add(35);
+						vars.watchScmMissionLocalVariables.Add(121);
+						vars.watchScmMissionLocalVariables.Add(122);
+						vars.watchScmMissionLocalVariables.Add(123);
+						vars.watchScmGlobalVariables.Add(6987, "lls_pickupsGrabbed");
+						vars.watchScmMissionLocalVariables.Add(34);
+
+						Func<string> func_lls = () => {
+							if (!vars.ValidateMissionProgress("cat1", "lls_pass", 0, 1, "lls_pass", "lls")) {
+								return;
+							}
+							var lls_chapter = vars.GetWatcher("34@");
+							if (lls_chapter.Current > lls_chapter.Old && lls_chapter.Current == 2) {
+								return "lls_cutsceneEnd";
+							}
+							if (lls_chapter.Current == 4) {
+								var lls_subChapter = vars.GetWatcher("35@");
+								if (lls_subChapter.Current > lls_subChapter.Old) {
+									switch ((int)lls_subChapter.Current) {
+										case 2:
+											vars.TrySplit("lls_endMarker");
+											break;
+										case 4:
+											vars.TrySplit("lls_endCutStart");
+											break;
+										case 5:
+											vars.TrySplit("lls_endCutCatalinaWalk");
+											break;
+									}
+								}
+							}
+							var lls_pickupsGrabbed = vars.GetWatcher("lls_pickupsGrabbed");
+							if (lls_pickupsGrabbed.Changed && lls_pickupsGrabbed.Current > lls_pickupsGrabbed.Old && lls_pickupsGrabbed.Current >= 2 && lls_pickupsGrabbed.Current <= 4) {
+								vars.TrySplit("lls_pickupsGrabbed" + lls_pickupsGrabbed.Old);
+							}
+
+							var lls_guyDead1 = vars.GetWatcher("121@");
+							if (lls_guyDead1.Changed && lls_guyDead1.Current == 1) {
+								vars.TrySplit("lls_guyDead1");
+							}
+							var lls_guyDead2 = vars.GetWatcher("122@");
+							if (lls_guyDead2.Changed && lls_guyDead2.Current == 1) {
+								vars.TrySplit("lls_guyDead2");
+							}
+							var lls_guyDead3 = vars.GetWatcher("123@");
+							if (lls_guyDead1.Changed && lls_guyDead1.Current == 1) {
+								vars.TrySplit("lls_guyDead3");
+							}
+							return;
+						};
+						vars.CheckSplit.Add(func_lls);
+					#endregion
+					#region Against All Odds
+						vars.watchScmGlobalVariables.Add(717, "aao_pass");	// $ALL_CATALINA_MISSIONS_PASSED (not aptly named variable)
+						vars.RegisterMissionBasics("aao","Against All Odds","cat4","BL_Catalina");
+
+						settings.Add("aao_introCut", false, "Intro cutscene ended");
+						settings.Add("aao_shopEntered", false, "Betting shop entered");
+						settings.Add("aao_doorBlown", false, "Back room door destroyed");
+						settings.Add("aao_shopLeft", false, "Betting shop exited");
+						settings.Add("aao_carEntered", false, "Car entered");
+						settings.Add("aao_chainsawPicked", false, "Chainsaw picked up");
+						settings.SetToolTip("aao_chainsawPicked", "Not a mission requirement");
+						settings.Add("aao_wantedLevel4", false, "4th wanted star lost");
+						settings.Add("aao_wantedLevel3", false, "3rd wanted star lost");
+						settings.Add("aao_wantedLevel2", false, "2nd wanted star lost");
+						settings.Add("aao_wantedLevel1", false, "1st wanted star lost");
+						settings.Add("aao_endMarker", false, "Final marker reached");
+						settings.Add("aao_pass", true, "Mission Passed");
+
+						vars.watchScmMissionLocalVariables.Add(96);
+						vars.watchScmMissionLocalVariables.Add(97);
+						vars.watchScmMissionLocalVariables.Add(99);
+						vars.watchScmMissionLocalVariables.Add(108);
+						vars.watchScmMissionLocalVariables.Add(103);
+						
+						Func<string> func_aao = () => {
+							if (!vars.ValidateMissionProgress("cat4", "aao_pass", 0, 1, "aao_pass", "aao")) {
+								return;
+							}
+							var aao_shopEntered = vars.GetWatcher("96@");
+							var aao_cutsceneProgression = vars.GetWatcher("97@");
+							var aao_doorBlown = vars.GetWatcher("103@");
+							var aao_endMarker = vars.GetWatcher("90@");
+							if (aao_cutsceneProgression.Changed && aao_cutsceneProgression.Current == 10) {
+								if (aao_endMarker.Current == 1) {
+									return;
+								}
+								if (aao_shopEntered.Current == 0) {
+									return "aao_introCut";
+								}
+								if (aao_doorBlown.Current == 1) {
+									return "aao_shopLeft";
+								}
+							}
+							if (aao_shopEntered.Changed && aao_shopEntered.Current == 1) {
+								return "aao_shopEntered";
+							}
+							if (aao_doorBlown.Changed && aao_doorBlown.Current == 1) {
+								return "aao_doorBlown";
+							}
+							if (aao_endMarker.Changed && aao_endMarker.Current == 1) {
+								return "aao_endMarker";
+							}
+							var aao_carEntered = vars.GetWatcher("99@");
+							if (aao_carEntered.Changed && aao_carEntered.Current == 1) {
+								return "aao_carEntered";
+							}
+							var aao_wantedLevel = vars.GetWatcher("wantedLevel");
+							if (aao_wantedLevel.Changed && aao_wantedLevel.Current < aao_wantedLevel.Old) {
+								return "aao_wantedLevel"+aao_wantedLevel.Old;
+							}
+							var aao_weaponSlotMelee = vars.GetWatcher("weaponSlotMelee");
+							if (aao_weaponSlotMelee.Changed && aao_weaponSlotMelee.Current == 9) {
+								return "aao_chainsawPicked";
+							}
+							return;
+						};
+						vars.CheckSplit.Add(func_aao);
+					#endregion
+				#endregion
+				#region Cesar
+					settings.Add("BL_Cesar", true, "Cesar", "BL");
+
+					#region Wu Zi Mu / Farewell My Love
+						vars.watchScmGlobalVariables.Add(492, "bl_cesar_chain");	// $CESAR_TOTAL_PASSED_MISSIONS
+						
+						settings.Add("bcesar4_wzm", true, "Wu Zi Mu", "BL_Cesar");
+						settings.SetToolTip("bcesar4_wzm", "See also 'Badlands A' in Side Missions -> Races section.");
+						settings.CurrentDefaultParent = "bcesar4_wzm";
+						settings.Add("bcesar4_wzm_marker", false, "Mission Marker Entered");
+						settings.Add("bcesar4_wzm_start", false, "Mission Started");
+						settings.Add("bcesar4_wzm_cutEnd", false, "Intro cutscene ended");
+						settings.Add("bcesar4_wzm_raceEnd", false, "Race won");
+						settings.Add("bcesar4_wzm_endCutStart", false, "Ending cutscene started");
+						settings.Add("bcesar4_wzm_pass", true, "Mission Passed");
+						
+						settings.Add("bcesar4_fml", true, "Farewell, my love...", "BL_Cesar");
+						settings.SetToolTip("bcesar4_fml", "See also 'Badlands B' in Side Missions -> Races section.");
+						settings.CurrentDefaultParent = "bcesar4_fml";
+						settings.Add("bcesar4_fml_marker", false, "Mission Marker Entered");
+						settings.Add("bcesar4_fml_start", false, "Mission Started");
+						settings.SetToolTip("bcesar4_fml_start", "Note: This won't trigger properly if the mission is started immediately after Wu Zi Mu (by parking where the marker will be).");
+						settings.Add("bcesar4_fml_cutEnd", false, "Intro cutscene ended");
+						settings.Add("bcesar4_fml_raceEnd", false, "Race won");
+						settings.Add("bcesar4_fml_endCutStart", false, "Ending cutscene started");
+						settings.Add("bcesar4_fml_pass", true, "Mission Passed");
+
+						vars.missionNames.Add("Wu Zi Mu","bcesar4_wzm_marker");
+						vars.missionNames.Add("Farewell, my love...","fml_marker");
+						
+						Func<string> func_bcesar4 = () => {
+							var bcesar4_thread = vars.GetWatcher("thread");
+							var bl_cesar_chain = vars.GetWatcher("bl_cesar_chain");
+							if (bcesar4_thread.Changed) {
+								if (bcesar4_thread.Current == "bcesar4") {
+									if (bl_cesar_chain.Current == 0) {
+										return "bcesar4_wzm_start";
+									}
+									if (bl_cesar_chain.Current == 5) {
+										return "bcesar4_fml_start";
+									}
+								}
+							}
+
+							if ( bl_cesar_chain.Changed && bl_cesar_chain.Old <= 9 && bl_cesar_chain.Current > bl_cesar_chain.Old) {
+								switch ((int)bl_cesar_chain.Current) {
+									case 2:
+										return "bcesar4_wzm_cutEnd";
+										break;
+									case 3:
+										return "bcesar4_wzm_raceEnd";
+										break;
+									case 4:
+										return "bcesar4_wzm_endCutStart";
+										break;
+									case 5:
+										return "bcesar4_wzm_pass";
+										break;
+									case 7:
+										return "bcesar4_fml_cutEnd";
+										break;
+									case 8:
+										return "bcesar4_fml_raceEnd";
+										break;
+									case 9:
+										return "bcesar4_fml_endCutStart";
+										break;
+									case 10:
+										return "bcesar4_fml_pass";
+										break;
+								}
+							}
+							return;
+						};
+						vars.CheckSplit.Add(func_bcesar4);
+					#endregion
+				#endregion
+				#region The Truth
+					settings.Add("BL_Truth", true, "The Truth", "BL");
+					vars.watchScmGlobalVariables.Add(491, "bl_truth_chain"); 	//$TRUTH_TOTAL_PASSED_MISSIONS
+					#region Body Harvest
+						settings.Add("bh", true, "Body Harvest", "BL_Truth");
+						settings.CurrentDefaultParent = "bh";
+
+						settings.Add("bh_marker", false, "Mission Marker Entered");
+						settings.Add("bh_start", false, "Mission Started");
+						settings.Add("bh_farmArrive", false, "Cutscene when arriving at the farm start");
+						settings.Add("bh_farmInfiltrate", false, "Cutscene when arriving at the farm end");
+						settings.Add("bh_sideTractors", false, "Triggering ambush with two tractors coming from each side");
+						settings.Add("bh_driverExit", false, "Combine driver gets out");
+						settings.Add("bh_combineStolen", false, "Combine entered");
+						settings.Add("bh_fieldExit", false, "Leaving the field with the Combine");
+						settings.Add("bh_cornerTurn", false, "Turning the corner at the water tower with the Combine");
+						settings.Add("bh_farmExit", false, "Exiting the farm property grounds with the Combine");
+						settings.Add("bh_combineDelivered", false, "Combine delivered to The Truth");
+						settings.Add("bh_phoneRinging", false, "Phone ringing");
+						settings.Add("bh_phoneCancel", false, "Hanging up phone");
+						settings.Add("bh_pass", true, "Mission Passed");
+
+						vars.significantThreads.Add("truth1", "bh_start");
+						vars.missionNames.Add("Body Harvest", "bh_marker");
+
+						vars.watchScmMissionLocalVariables.Add(117);
+						vars.watchScmMissionLocalVariables.Add(125);
+						vars.watchScmMissionLocalVariables.Add(128);
+						vars.watchScmMissionLocalVariables.Add(129);
+						vars.watchScmMissionLocalVariables.Add(136);
+						vars.watchScmMissionLocalVariables.Add(142);
+						vars.watchScmMissionLocalVariables.Add(146);
+
+						Func<string> func_bh = () => {
+							if (!vars.ValidateMissionProgress("truth1", "bl_truth_chain", 0, 1, "bh_pass", "bh")) {
+								return;
+							}
+							var bh_arriveCut = vars.GetWatcher("117@");
+							if (bh_arriveCut.Changed) {
+								if (bh_arriveCut.Current == 1) {
+									return "bh_farmArrive";
+								}
+								if (bh_arriveCut.Current == 5) {
+									return "bh_farmInfiltrate";
+								}
+							}
+							var bh_combineStatus = vars.GetWatcher("129@");
+							if (bh_combineStatus.Changed) {
+								if (bh_combineStatus.Current == 1) {
+									return "bh_combineStolen";
+								}
+								if (bh_combineStatus.Current == 3) {
+									return "bh_combineDelivered";
+								}
+								if (bh_combineStatus.Current == 9) {
+									return "bh_phoneRinging";
+								}
+							}
+							var bh_sideTractors = vars.GetWatcher("125@");
+							if (bh_sideTractors.Changed && bh_sideTractors.Current == 1) {
+								return "bh_sideTractors";
+							}
+							var bh_driverExit = vars.GetWatcher("128@");
+							if (bh_driverExit.Changed && bh_driverExit.Current == 1) {
+								return "bh_driverExit";
+							}
+							var bh_fieldExit = vars.GetWatcher("136@");
+							if (bh_fieldExit.Changed && bh_fieldExit.Current == 1) {
+								return "bh_fieldExit";
+							}
+							var bh_farmExit = vars.GetWatcher("142@");
+							if (bh_farmExit.Changed && bh_farmExit.Current == 1) {
+								return "bh_farmExit";
+							}
+							var bh_phoneCancel = vars.GetWatcher("146@");
+							if (bh_phoneCancel.Changed && bh_phoneCancel.Current == 1) {
+								return "bh_phoneCancel";
+							}
+
+							return;
+						};
+						vars.CheckSplit.Add(func_bh);
+					#endregion
+					#region Are You Going to San Fierro?
+						vars.RegisterMissionBasics("truth2","Are you going to San Fierro?","truth2","BL_Truth");
+
+						settings.Add("truth2_cutsceneEnd", true, "End of intro cinematic");
+
+						settings.Add("truth2_plants", false, "Plants destroyed");
+						settings.Add("truth2_plant1", false, "1 plant destroyed", "truth2_plants");
+						for (int i = 2; i <= 43; i++) {
+							settings.Add("truth2_plant"+i, false, i+" plants destroyed", "truth2_plants");
+						}
+						settings.Add("truth2_plant44", false, "All 44 plants destroyed", "truth2_plants");
+						
+						settings.Add("truth2_rpgCutscene", true, "End of cutscene where CJ acquires rocket launcher");
+						settings.Add("truth2_heliDead", true, "Helicopter destroyed");
+						settings.Add("truth2_mothershipEntered", true, "Mothership entered");
+						settings.Add("truth2_garageArrive", true, "Arrival at the garage");
+						
+						settings.Add("truth2_pass", true, "Mission Passed");
+
+						vars.watchScmMissionLocalVariables.Add(87);
+						vars.watchScmMissionLocalVariables.Add(88);
+
+						vars.watchScmGlobalVariables.Add(7011, "truth2_plantsRemaining");
+
+						Func<string> func_truth2 = () => {
+							if (!vars.ValidateMissionProgress("truth2", "bl_truth_chain", 1, 2, "truth2_pass", "truth2")) {
+								return;
+							}
+							var truth2_plantsRemaining = vars.GetWatcher("truth2_plantsRemaining");
+							if (truth2_plantsRemaining.Changed) {
+								if (truth2_plantsRemaining.Current == 44) {
+									return "truth2_cutsceneEnd";
+								}
+								for (int i = truth2_plantsRemaining.Old; i > truth2_plantsRemaining.Current; i--) {
+									var truth2_plantsDestroyed = 45 - i;
+									vars.TrySplit("truth2_plant"+truth2_plantsDestroyed);
+								}
+							}
+							var truth2_progress = vars.GetWatcher("87@");
+							if (truth2_progress.Changed) {
+								switch ((int)truth2_progress.Current) {
+									// case 1: all plants destroyed, redundant
+									case 2: 
+										return "truth2_heliDead";
+										break;
+									case 3:
+										return "truth2_mothershipEntered";
+										break;
+									case 5:
+										return "truth2_garageArrive";
+										break;
+								}
+							}
+							var truth2_rpgCutscene = vars.GetWatcher("88@");
+							if (truth2_rpgCutscene.Changed && truth2_rpgCutscene.Current == 5) {
+								return "truth2_rpgCutscene";
+							}
+
+							return;
+						};
+						vars.CheckSplit.Add(func_truth2);
+					#endregion
+				
+				#endregion
 			#endregion
 
-			settings.Add("BL", true, "Badlands", "Missions");
-			settings.Add("BL_Intro", true, "Trailer Park", "BL");
-			settings.Add("BL_Catalina", true, "Catalina", "BL");
-			settings.Add("BL_Cesar", true, "Cesar", "BL");
-			settings.Add("BL_Truth", true, "The Truth", "BL");
+
 
 			settings.Add("SF", true, "San Fierro", "Missions");
 			settings.CurrentDefaultParent = "SF";
@@ -2042,82 +3149,132 @@ startup {
 				vars.CheckSplit.Add(func_courier);
 
 			#endregion
+			#region Trucking
+				settings.Add("trucking", true, "Trucking", "SideMissions");
+				for (int i = 1; i <= 8; i++) {
+					settings.Add("trucking"+i, true, "Trucking "+i, "trucking");
+					settings.CurrentDefaultParent = "trucking"+i;
+					settings.Add("trucking"+i+"_marker", false, "Mission Marker Entered");
+					settings.Add("trucking"+i+"_start", false, "Mission Started");
+					settings.Add("trucking"+i+"_compoundLeft", false, "Leaving compound");
+					settings.Add("trucking"+i+"_pass", true, "Mission Passed");
+					settings.Add("trucking"+i+"_truckExit", false, "Truck exited after passing");
+				}
 
-			settings.Add("Trucking", true, "Trucking", "SideMissions");
+				vars.watchScmGlobalVariables.Add(8159, "trucking_totalPassed");	// $TRUCKING_TOTAL_PASSED_MISSIONS
+				
+				vars.watchScmMissionLocalVariables.Add(36);		// Stage flag
+				vars.watchScmMissionLocalVariables.Add(106);	// Compound flag
+
+				vars.significantThreads.Add("truck","");
+
+				Func<string> func_trucking = () => {
+					var trucking_omst = vars.GetWatcher("oddMissionStartText");
+					var trucking_totalPassed = vars.GetWatcher("trucking_totalPassed");
+					var trucking_num = trucking_totalPassed.Old + 1;
+					if (trucking_omst.Changed && trucking_omst.Current == "Trucking") {
+						return "trucking"+trucking_num+"_marker";
+					}
+					if (vars.lastStartedMission != "truck") {
+						return;
+					}
+					if (trucking_totalPassed.Changed && trucking_totalPassed.Old < trucking_totalPassed.Current) {
+						return "trucking"+trucking_num+"_pass";
+					}
+					var trucking_stage = vars.GetWatcher("36@");
+					if (trucking_stage.Changed) {
+						switch ((int)trucking_stage.Current) {
+							case 1:
+								return "trucking"+trucking_num+"_start";
+								break;
+							case 3:
+								return "trucking"+(trucking_num-1)+"_truckExit";
+								break;	
+						}
+					}
+					var trucking_compoundLeft = vars.GetWatcher("106@");
+					if (trucking_compoundLeft.Changed && trucking_compoundLeft.Current == 1) {
+						return "trucking"+trucking_num+"_compoundLeft";
+					}
+					return;
+				};
+				vars.CheckSplit.Add(func_trucking);
+			#endregion
+
 			settings.Add("Quarry", true, "Quarry", "SideMissions");
 			settings.Add("Valet", true, "Valet Parking", "SideMissions");
 
 			#region Vehicle submissions
 				settings.Add("VehicleSubmissions", true, "Vehicle Submissions", "SideMissions");
-			#region Firefighter
-				settings.Add("firefighter", true, "Firefighter", "VehicleSubmissions");
-				settings.Add("firefighter_start", false, "Mission Started for the first time", "firefighter");
-				settings.Add("firefighter_level", false, "Levels", "firefighter");
-				settings.CurrentDefaultParent = "firefighter_level";
-				for (int i = 1; i <= 12; i++) {
-					settings.Add("firefighter_level"+i, false, "Level "+i);
-				}
-				var firefighter_levelsForFire = new int[78] {
-					1, 2, 2, 3, 3, 3, 4, 4, 4, 4,
-					5, 5, 5, 5, 5, 6, 6, 6, 6, 6,
-					6, 7, 7, 7, 7, 7, 7, 7, 8, 8,
-					8, 8, 8, 8, 8, 8, 9, 9, 9, 9,
-					9, 9, 9, 9, 9,10,10,10,10,10,
-					10,10,10,10,10,11,11,11,11,11,
-					11,11,11,11,11,11,12,12,12,12,
-					12,12,12,12,12,12,12,12
-				};
-				settings.Add("firefighter_fire", false, "Fires Extinguished", "firefighter");
-				settings.CurrentDefaultParent = "firefighter_fire";
-				settings.Add("firefighter_fire1", false, "1 fire extinguished (level 1 fire 1)");
-				var firefighter_levelFireCounter = 0;
-				var firefighter_levelCounter = 2;
-				for (int i = 2; i <= 78; i++) {
-					firefighter_levelFireCounter++;
-					settings.Add("firefighter_fire"+i, false, i+" fires extinguished (level "+firefighter_levelCounter+" fire "+firefighter_levelFireCounter+")");
-					if (firefighter_levelFireCounter >= firefighter_levelCounter) {
-						firefighter_levelCounter++;
-						firefighter_levelFireCounter = 0;
+				#region Firefighter
+					settings.Add("firefighter", true, "Firefighter", "VehicleSubmissions");
+					settings.Add("firefighter_start", false, "Mission Started for the first time", "firefighter");
+					settings.Add("firefighter_level", false, "Levels", "firefighter");
+					settings.CurrentDefaultParent = "firefighter_level";
+					for (int i = 1; i <= 12; i++) {
+						settings.Add("firefighter_level"+i, false, "Level "+i);
 					}
-				}
-				settings.Add("firefighter_pass", false, "Mission Passed", "firefighter");
-
-				vars.watchScmGlobalVariables.Add(1489, "firefighter_passed");	// directly goes to 2 when complete
-				vars.watchScmGlobalVariables.Add(8213, "firefighter_currentLevel");
-				vars.watchScmGlobalVariables.Add(8214, "firefighter_firesExtinguished");
-
-				vars.significantThreads.Add("firetru","firefighter_start");
-
-				Func<string> func_firefighter = () => {
-					if (vars.lastStartedMission != "firetru") {
-						return;
-					}
-					// Mission order: Extinguish fire, advance level, pass mission.
-					// So we want to split them in that order too just to be clean.
-					var firefighter_firesExtinguished = vars.GetWatcher("firefighter_firesExtinguished");
-					if (firefighter_firesExtinguished.Changed) {
-						var c = firefighter_firesExtinguished.Current;
-						var o = firefighter_firesExtinguished.Old;
-						for (int i = o+1; i <= c; i++) {
-							// Do a for loop in case two fires are extinguished at once.
-							vars.TrySplit("firefighter_fire"+i);
+					var firefighter_levelsForFire = new int[78] {
+						1, 2, 2, 3, 3, 3, 4, 4, 4, 4,
+						5, 5, 5, 5, 5, 6, 6, 6, 6, 6,
+						6, 7, 7, 7, 7, 7, 7, 7, 8, 8,
+						8, 8, 8, 8, 8, 8, 9, 9, 9, 9,
+						9, 9, 9, 9, 9,10,10,10,10,10,
+						10,10,10,10,10,11,11,11,11,11,
+						11,11,11,11,11,11,12,12,12,12,
+						12,12,12,12,12,12,12,12
+					};
+					settings.Add("firefighter_fire", false, "Fires Extinguished", "firefighter");
+					settings.CurrentDefaultParent = "firefighter_fire";
+					settings.Add("firefighter_fire1", false, "1 fire extinguished (level 1 fire 1)");
+					var firefighter_levelFireCounter = 0;
+					var firefighter_levelCounter = 2;
+					for (int i = 2; i <= 78; i++) {
+						firefighter_levelFireCounter++;
+						settings.Add("firefighter_fire"+i, false, i+" fires extinguished (level "+firefighter_levelCounter+" fire "+firefighter_levelFireCounter+")");
+						if (firefighter_levelFireCounter >= firefighter_levelCounter) {
+							firefighter_levelCounter++;
+							firefighter_levelFireCounter = 0;
 						}
 					}
-					var firefighter_currentLevel = vars.GetWatcher("firefighter_currentLevel");
-					if (firefighter_currentLevel.Changed) {
-						if (firefighter_currentLevel.Old > 0 && firefighter_currentLevel.Current > firefighter_currentLevel.Old) {
-							vars.TrySplit("firefighter_level"+firefighter_currentLevel.Old);
+					settings.Add("firefighter_pass", false, "Mission Passed", "firefighter");
+
+					vars.watchScmGlobalVariables.Add(1489, "firefighter_passed");	// directly goes to 2 when complete
+					vars.watchScmGlobalVariables.Add(8213, "firefighter_currentLevel");
+					vars.watchScmGlobalVariables.Add(8214, "firefighter_firesExtinguished");
+
+					vars.significantThreads.Add("firetru","firefighter_start");
+
+					Func<string> func_firefighter = () => {
+						if (vars.lastStartedMission != "firetru") {
 							return;
 						}
-					}
-					var firefighter_passed = vars.GetWatcher("firefighter_passed");
-					if (firefighter_passed.Changed && firefighter_passed.Current == 2) {
-						vars.TrySplit("firefighter_pass");
-					}
-					return;
-				};
-				vars.CheckSplit.Add(func_firefighter);
-			#endregion
+						// Mission order: Extinguish fire, advance level, pass mission.
+						// So we want to split them in that order too just to be clean.
+						var firefighter_firesExtinguished = vars.GetWatcher("firefighter_firesExtinguished");
+						if (firefighter_firesExtinguished.Changed) {
+							var c = firefighter_firesExtinguished.Current;
+							var o = firefighter_firesExtinguished.Old;
+							for (int i = o+1; i <= c; i++) {
+								// Do a for loop in case two fires are extinguished at once.
+								vars.TrySplit("firefighter_fire"+i);
+							}
+						}
+						var firefighter_currentLevel = vars.GetWatcher("firefighter_currentLevel");
+						if (firefighter_currentLevel.Changed) {
+							if (firefighter_currentLevel.Old > 0 && firefighter_currentLevel.Current > firefighter_currentLevel.Old) {
+								vars.TrySplit("firefighter_level"+firefighter_currentLevel.Old);
+								return;
+							}
+						}
+						var firefighter_passed = vars.GetWatcher("firefighter_passed");
+						if (firefighter_passed.Changed && firefighter_passed.Current == 2) {
+							vars.TrySplit("firefighter_pass");
+						}
+						return;
+					};
+					vars.CheckSplit.Add(func_firefighter);
+				#endregion
 
 			#endregion
 			#region Races
@@ -2160,12 +3317,11 @@ startup {
 
 				// Checkpoint count for each race.
 				// This includes the 0th checkpoint (GO! signal)
-				var race_checkpointCounts = new int[27] {
-					12,11,19,19,21,
-					23,27,31,33,19,
-					20,16,16,41,42,
-					27,25,27,21,35,
-					62,70,27,27,28,
+				var race_checkpointCounts = new int[] {
+					12,11,19,19,21,23,27,31,33,
+					19,20,16,16,41,42,
+					27,25,27,21,
+					35,62,70,27,27,28,
 					8,14
 				};
 				for (int i = 0; i < 24; i++) {
@@ -2239,7 +3395,128 @@ startup {
 			#endregion
 
 			settings.Add("StadiumEvents", true, "Stadium Events", "SideMissions");
-			settings.Add("VehicleChallenges", true, "Vehicle Challenges", "SideMissions");
+			
+			#region Vehicle Challenges
+				settings.Add("VehicleChallenges", true, "Vehicle Challenges", "SideMissions");
+				// BMX
+				// NRG
+				#region Chiliad Challenge
+					settings.Add("mtbiker", true, "Chiliad Challenge", "VehicleChallenges");
+					settings.CurrentDefaultParent = "mtbiker";
+					settings.Add("mtbiker1", true, "Scotch Bonnet Yellow Route");
+					settings.Add("mtbiker2", true, "Birdseye Winder");
+					settings.Add("mtbiker3", true, "Cobra Run");
+					for (int i = 1; i <= 3; i++) {
+						var mtbikerN = "mtbiker"+i;
+						settings.CurrentDefaultParent = mtbikerN;
+						settings.Add(mtbikerN + "_marker", false, "Bicycle mounted");
+						settings.Add(mtbikerN + "_start", false, "Countdown start");
+						settings.Add(mtbikerN + "_cp0", false, "Race start (Countdown end)");
+					}
+					for (int cp = 1; cp <= 17; cp++) {
+						settings.Add("mtbiker1_cp" + cp, false, "Checkpoint "+cp, "mtbiker1");
+					}
+					for (int cp = 1; cp <= 30; cp++) {
+						settings.Add("mtbiker2_cp" + cp, false, "Checkpoint "+cp, "mtbiker2");
+					}
+					for (int cp = 1; cp <= 22; cp++) {
+						if (cp == 12) { 
+							continue;
+						}
+						else if (cp == 13) {
+							settings.Add("mtbiker3_cp12", false, "Checkpoint 12 & 13", "mtbiker3");
+							settings.SetToolTip("mtbiker3_cp12", "Checkpoint 13 is bugged and is automatically rewarded upon hitting checkpoint 12.");
+						}
+						else {
+							settings.Add("mtbiker3_cp" + cp, false, "Checkpoint "+cp, "mtbiker3");
+						}
+					}
+					settings.Add("mtbiker1_cp18", false, "Checkpoint 18 (Finish)", "mtbiker1");
+					settings.Add("mtbiker2_cp31", false, "Checkpoint 31 (Finish)", "mtbiker2");
+					settings.Add("mtbiker3_cp23", false, "Checkpoint 23 (Finish)", "mtbiker3");
+					settings.Add("mtbiker1_pass", false, "Race won", "mtbiker1");
+					settings.Add("mtbiker2_pass", false, "Race won", "mtbiker2");
+					settings.Add("mtbiker3_pass", false, "Race won", "mtbiker3");
+
+					vars.watchScmMissionLocalVariables.Add(646); // reward money
+					vars.watchScmMissionLocalVariables.Add(700); // total CPs this race
+					vars.watchScmMissionLocalVariables.Add(750); // player CP for races 1 & 2
+					vars.watchScmMissionLocalVariables.Add(747); // for race 3
+				
+					vars.watchScmGlobalVariables.Add(1799, "mtbiker_nextRace");
+					vars.watchScmGlobalVariables.Add(1801, "mtbiker_complete");
+
+					vars.significantThreads.Add("mtbiker","");
+
+					Func<string> func_mtbiker = () => {
+						var mtbiker_complete = vars.GetWatcher("mtbiker_complete");
+						if (!mtbiker_complete.Changed && mtbiker_complete.Current == 1) {
+							return;
+						}
+						if (mtbiker_complete.Changed && mtbiker_complete.Current == 1) {
+							return "mtbiker3_cp23";
+						}
+						// The value for current race changes before the final checkpoint is registered.
+						// This happens in conjunction with the reward money being written.
+						// So first check if the reward money is set, otherwise go by CP count
+						var mtbiker_rewardMoney = vars.GetWatcher("646@");
+						if (mtbiker_rewardMoney.Changed) {
+							switch ((int)mtbiker_rewardMoney.Current) {
+								case 20000:
+									return "mtbiker1_pass";
+									break;
+								case 30000:
+									return "mtbiker2_pass";
+									break;
+								case 40000:
+									return "mtbiker3_pass";
+									break;
+							}
+						}
+						var mtbiker_currentRace = 0;
+						switch ((int)mtbiker_rewardMoney.Current) {
+							case 20000:
+								mtbiker_currentRace = 1;
+								break;
+							case 30000:
+								mtbiker_currentRace = 2;
+								break;
+							case 40000:
+								mtbiker_currentRace = 3;
+								break;
+							default:
+								var mtbiker_nextRace = vars.GetWatcher("mtbiker_nextRace");
+								mtbiker_currentRace = mtbiker_nextRace.Current;
+								break;
+						}
+						var mtbiker_totalCps = vars.GetWatcher("700@");
+						if (mtbiker_totalCps.Changed) {
+							switch ((int)mtbiker_totalCps.Current) {
+								case 19:
+									return "mtbiker1_start";
+									break;
+								case 32:
+									return "mtbiker2_start";
+									break;
+								case 24:
+									return "mtbiker3_start";
+									break;
+							}
+						}
+						var mtbiker_text = vars.GetWatcher("missionStartText");
+						if (mtbiker_text.Changed && mtbiker_text.Current == "The Chiliad Challenge") {
+							return "mtbiker"+mtbiker_currentRace+"_marker";
+						}
+						var mtbiker_checkpoints = mtbiker_currentRace == 3 ? vars.GetWatcher("747@") : vars.GetWatcher("750@");
+						if (mtbiker_checkpoints.Current > mtbiker_checkpoints.Old) {
+							vars.TrySplit("mtbiker"+mtbiker_currentRace+"_cp"+mtbiker_checkpoints.Old.ToString());
+						}
+						return;
+					};
+					vars.CheckSplit.Add(func_mtbiker);
+					
+				#endregion
+			#endregion
 			settings.Add("Schools", true, "Schools", "SideMissions");
 
 			#region Properties
@@ -2796,14 +4073,14 @@ startup {
 					else if (i == 9) { nameRTLS += " (After Grove 4 Life in common any% NMG routes)";}
 					else if (i == 11) { nameLS += " (Starting count on new game)";}
 					else if (i == 12) { nameLS += " (Glen Park during Doberman)";}
-					else if (i == 17) { nameRTLS += " (All territories sans Grove 4 Life)";}
+					else if (i == 17) { nameRTLS += " (Required territory count sans Grove 4 Life)";}
 					else if (i == 19) { nameRTLS += " (Requirement to unlock End of the Line)";}
 					else if (i == 53) { nameLS += " (All)"; nameRTLS += " (All)";}
 					else if (i == 57) { nameRTLS += " (All + Varrios Los Aztecas territories)";}
 					else if (i == 378) { nameLS += " (Entire map Glitch)"; nameRTLS += " (Entire map glitch)";}
 					else if (i == 379) { nameLS += " (Entire map Glitch + SAN_AND)"; nameRTLS += " (Entire map glitch + SAN_AND)";}
 					settings.Add("GT_LS_"+i, false, nameLS, "GT_LS_Held");
-					settings.Add("GT_RTLS_"+i, false, nameLS, "GT_RTLS_Held");
+					settings.Add("GT_RTLS_"+i, false, nameRTLS, "GT_RTLS_Held");
 				}
 				settings.Add("GT_LS_Specific", false, "Specific Territories", "GT_LS");
 				settings.Add("GT_RTLS_Specific", false, "Specific Territories", "GT_RTLS");
@@ -3481,6 +4758,12 @@ startup {
 						// Cesar Vialpando or Burning Desire not passed
 						return;
 					}
+					var thread = vars.GetWatcher("thread");
+					if (thread.Current == "sweet7") {
+						// Los Sepulcros
+						// sets territories temporarily as not yours
+						return;
+					}
 					var GT_splitPrefix = "GT_LS_";
 					var ls_final_chain = vars.GetWatcher("ls_final_chain");
 					var rtls_mansion_chain = vars.GetWatcher("rtls_mansion_chain");
@@ -3498,10 +4781,14 @@ startup {
 							vars.TrySplit(GT_splitPrefix + GT_count.Current);
 						}
 					}
+
 					// Check specific regions
+					if (!vars.CheckSetting("GT_RTLS_Specific") && !vars.CheckSetting("GT_LS_Specific")) {
+						return;
+					}
 					GT_splitPrefix += "r";
 					for (int i = 0; i < vars.GT_TerritoryCount; i++) {
-						if (!settings["GT_LS_zOther"] && !settings["GT_RTLS_zOther"] && !vars.GT_OGTerritories.Contains(i)) {
+						if (!vars.CheckSetting("GT_LS_zOther") && !vars.CheckSetting("GT_RTLS_zOther") && !vars.GT_OGTerritories.Contains(i)) {
 							continue;
 						}
 						var GT_x = vars.GetWatcher("GT_"+i);
@@ -3551,19 +4838,100 @@ startup {
 				};
 				vars.CheckSplit.Add(func_GangTerritories);
 			#endregion
+			#region Warps
+				
+				// 				// Deathwarps
+				// //===========
+				// // Deathwarps. Key = mission passed before the warp. Value = A list of possible
+				// // missions after the warp. A list instead of just a single string to be able
+				// // to accomodate different routes. Warps will be satisfied if the player dies
+				// // while Key is passed but any Value is not. Mission names must be exact.
+				// vars.deathWarps = new Dictionary<string, List<string>> {
+				// 	{"Tanker Commander", new List<string> {"Body Harvest"}},
+				// 	{"Body Harvest", new List<string> {"King in Exile"}},
+				// 	{"Jizzy (Cutscene)", new List<string> {"Jizzy"}},
+				// 	{"Jizzy", new List<string> {"Mountain Cloud Boys"}},
+				// 	{"Mike Toreno", new List<string> {"Lure"}},
+				// 	{"Lure", new List<string> {"Paramedic"}},
+				// 	{"The Da Nang Thang", new List<string> {"Yay Ka-Boom-Boom"}},
+
+				// 	{"Boat School", new List<string> {"Yay Ka-Boom-Boom","Taxi Driver"}},
+
+				// 	{"Stretch", new List<string> {"Infernus"}},
+				// 	{"Patriot", new List<string> {"Infernus"}},
+				// 	{"Export List 1", new List<string> {"Rancher"}},
+				// 	{"Comet", new List<string> {"Stafford"}},
+				// 	{"BF Injection", new List<string> {"Shooting Range Complete"}},
+				// 	{"Freeway", new List<string> {"Taxi Driver"}},
+
+				// 	{"Trucking 7", new List<string> {"Madd Dogg"}},
+				// 	{"Dam and Blast", new List<string> {"Quarry"}},
+				// 	{"Up, Up and Away!", new List<string> {"World War Ace"}},
+				// 	{"Barnstorming", new List<string> {"Saint Mark's Bistro"}},
+				// };
+
+				// vars.bustedWarps = new Dictionary<string, List<string>> {
+						// 	{"Badlands", new List<string> {"Tanker Commander"}},
+				// 	{"King in Exile", new List<string> {"Small Town Bank"}},
+				// };
+				
+				settings.Add("Warps", false, "Death & Busted Warps", "Other");
+				settings.Add("BustedWarps", false, "Busted Warps", "Warps");
+				settings.CurrentDefaultParent = "BustedWarps";
+				settings.Add("BW_bl_tc", false, "Badlands -> First Date");
+				settings.Add("BW_kie_stb", false, "King in Exile -> First Base");
+				settings.Add("DeathWarps", false, "Death Warps", "Warps");
+				settings.CurrentDefaultParent = "DeathWarps";
+				settings.Add("DW_bh_kie", false, "Body Harvest -> King in Exile");
+				Func<string> func_warps = () => {
+					var pedStatus = vars.GetWatcher("pedStatus");
+					if (!pedStatus.Changed) {
+						return;
+					}
+					// Busted ==========================================
+					if (pedStatus.Current == 63) { 
+						// Badlands -> First Date
+						var bl_intro_chain = vars.GetWatcher("bl_intro_chain");
+						var catalina_count = vars.GetWatcher("catalina_count");
+						if (bl_intro_chain.Current == 1 && catalina_count.Current == 0) {
+							return "BW_bl_tc";
+						}
+						// King in Exile -> First Base
+						var bl_kie_chain = vars.GetWatcher("bl_intro_chain");
+						if (bl_kie_chain.Current == 1 && catalina_count.Current == 1) {
+							return "BW_kie_stb";
+						}
+					}
+					// Wasted ==========================================
+					if (pedStatus.Current == 55) {
+						var bl_truth_chain = vars.GetWatcher("bl_truth_chain");
+						var bl_kie_chain = vars.GetWatcher("bl_kie_chain");
+						if (bl_truth_chain.Current == 1 && bl_kie_chain.Current == 0) {
+							return "DW_bh_kie";
+						}
+					}
+					return;
+				};
+				vars.CheckSplit.Add(func_warps);
+			#endregion
 			#region Phone Calls
 				settings.Add("PhoneCalls", false, "Phone Calls", "Other");
 				settings.CurrentDefaultParent = "PhoneCalls";
 				// Calls:
 				// 6 - House Party reminder call
 				// 7 - Cesar to unlock High Stakes, Low-Rider
+				// 8 - Cesar unlocking Catalina
 				// 9 - Officer Hernandez
+				// 10 - Cesar badlands street race call
 				// 11 - HSLR Fail call
 				// 12 - Burning Desire unlock call
+				// 15 - Truth Body Harvest unlock call
+				// 16 - AYGTSF unlock call
 				// 18 - Doberman unlock call
 				// 19 - Sweet early missable phonecall
 				// 20 - Sweet gym call (not fat)
 				// 21 - * * Sweet gym call (fat)
+				// 24 - Sweet rants about Prison after Badlands
 
 				settings.Add("PhoneCall19", false, "Sweet; after Big Smoke; missable.");
 				settings.SetToolTip("PhoneCall19", "\"Thought I'd explain some shit.\"\nSweet explains how the Grove has fallen apart.\nMissable phonecall, call stops coming in after Drive-Thru.");
@@ -3589,13 +4957,29 @@ startup {
 				settings.Add("PhoneCall18", false, "Sweet; after Cesar Vialpando & Burning Desire; unlocks mission");
 				settings.SetToolTip("PhoneCall18", "\"Some punk-ass, base-head fool has been slingin' to his Grove brothers.\"\nSweet informs CJ about someone in Glen Park.\nUnlocks Doberman.");
 				vars.watchScmGlobalVariables.Add(1346, "PhoneCall18");
+				settings.Add("PhoneCall8", false, "Cesar; after Badlands; unlocks mission");
+				settings.SetToolTip("PhoneCall8", "\"Your sister's been worried. I heard some shit went down.\"\nCesar hooks CJ up with Catalina.\nUnlocks First Date.");
+				vars.watchScmGlobalVariables.Add(1356, "PhoneCall8");
+				settings.Add("PhoneCall24", false, "Sweet; after Badlands");
+				settings.SetToolTip("PhoneCall24", "\"Man, what the fuck you think is going on? I'm in a prison hospital\"\nSweet calls from the prison.");
+				vars.watchScmGlobalVariables.Add(1359, "PhoneCall24");
+				settings.Add("PhoneCall15", false, "The Truth; after First Date; unlocks mission");
+				settings.SetToolTip("PhoneCall15", "\"You know me. This is The Truth.\"\nThe Truth introduces himself.\nUnlocks Body Harvest.");
+				vars.watchScmGlobalVariables.Add(1357, "PhoneCall15");
+				settings.Add("PhoneCall10", false, "Cesar; after First Base; unlocks mission");
+				settings.SetToolTip("PhoneCall10", "\"I can smell nitrous oxide from a mile off.\"\nCesar tells CJ about a streetrace in Badlands.\nUnlocks Wu Zi Mu.");
+				vars.watchScmGlobalVariables.Add(1362, "PhoneCall10");
+				settings.Add("PhoneCall16", false, "The Truth; after Farewell, my love...; unlocks mission (marker only)");
+				settings.SetToolTip("PhoneCall16", "\"I got that little mwah mwah you were after.\"\nThe Truth invites CJ to his farm.\nUnlocks Are you going to San Fierro?.\nPhonecall is not required to start mission, only to show the marker, but must eventually be taken to progress the call log.");
+				vars.watchScmGlobalVariables.Add(1363, "PhoneCall16");
 
 				Func<string> func_phonecall = () => {
 					for (int i = 0; i < 30; i++) {
 						var badCalls = new HashSet<int>() {
-							0, 1, 2, 3, 4, 5,       8,
-							10,      13,14,15,16,17,
-							21,22,23,24,25,26,27,28,29,
+							 0, 1, 2, 3, 4, 5,
+							         13,14,      17,
+							   21,22,23,   25,26,27,28,29,
+							30,31,32,33,34,35,36,37,38,39,
 						};
 						if (badCalls.Contains(i)) {
 							continue;
@@ -3633,38 +5017,6 @@ startup {
 
 			return;
 			vars.missionChains = new Dictionary<int, Dictionary<int, string>> {
-				{493, new Dictionary<int, string> { // $MISSION_BADLANDS_PASSED
-					{1, "Badlands"}
-				}},
-				{714, new Dictionary<int, string> { // $MISSION_LOCAL_LIQUOR_STORE_PASSED
-					{1, "Local Liquor Store"}
-				}},
-				{715, new Dictionary<int, string> { // $MISSION_SMALL_TOWN_BANK_PASSED
-					{1, "Small Town Bank"}
-				}},
-				{716, new Dictionary<int, string> { // $MISSION_TANKER_COMMANDER_PASSED
-					{1, "Tanker Commander"}
-				}},
-				{717, new Dictionary<int, string> { // $ALL_CATALINA_MISSIONS_PASSED (not aptly named variable)
-					{1, "Against All Odds"}
-				}},
-				{2163, new Dictionary<int, string> {
-					{1, "King in Exile"}
-				}},
-				{491, new Dictionary<int, string> { // $TRUTH_TOTAL_PASSED_MISSIONS
-					{1, "Body Harvest"},
-					{2, "Are You Going To San Fierro?"}
-				}},
-				{492, new Dictionary<int, string> { // $CESAR_TOTAL_PASSED_MISSIONS
-					{2, "Wu Zi Mu Starting Cutscene Ended"},
-					{3, "Wu Zi Mu Race Finished"},
-					{4, "Wu Zi Mu Ending Cutscene Started"},
-					{5, "Wu Zi Mu"},
-					{7, "Farewell, My Love Starting Cutscene Ended"},
-					{8, "Farewell, My Love Race Finished"},
-					{9, "Farewell, My Love Ending Cutscene Started"},
-					{10, "Farewell, My Love"}
-				}},
 				{541, new Dictionary<int, string> { // $GARAGE_TOTAL_PASSED_MISSIONS
 					{1, "Wear Flowers in your Hair"},
 					{2, "Deconstruction"}
@@ -3757,16 +5109,6 @@ startup {
 					{4, "End of the Line Part 2"},
 					{5, "End of the Line Part 3"} // After credits
 				}},
-				{8159, new Dictionary<int, string> { // $TRUCKING_TOTAL_PASSED_MISSIONS
-					{1, "Trucking 1"},
-					{2, "Trucking 2"},
-					{3, "Trucking 3"},
-					{4, "Trucking 4"},
-					{5, "Trucking 5"},
-					{6, "Trucking 6"},
-					{7, "Trucking 7"},
-					{8, "Trucking 8"}
-				}},
 				{8171, new Dictionary<int, string> { // $QUARRY_TOTAL_PASSED_MISSIONS
 					{1, "Quarry 1"},
 					{2, "Quarry 2"},
@@ -3814,7 +5156,7 @@ startup {
 				// 	{28, "Export Number 28"},
 				// 	{29, "Export Number 29"},
 				// 	{30, "Export Number 30"},
-				// }}, // TODO
+				// }},
 				{1861, new Dictionary<int, string> { // $1861
 					{1, "Pistol Round 1"},
 					{2, "Pistol Round 2"},
@@ -3931,79 +5273,6 @@ startup {
 				}}
 			};
 
-			// Street Races
-			//=============
-			// Completion of the races themselves is done by individualMissions, but for per-checkpoint
-			// splits we need to know how many checkpoints are in each race. Checkpoint count
-			// starts at 0 during the countdown and changes to 1 when the countdown ends. So
-			// Little Loop actually only has 10 checkpoints if counted visually. A race ends
-			// upon collecting the final checkpoint so we don't need to check for that one as
-			// it's already being splut by the race completed tracker.
-			vars.streetrace_checkpointcounts = new Dictionary<string, int> {
-				{"Lowrider Race", 12}, // 0
-				{"Little Loop", 11}, // 1
-				{"Backroad Wanderer", 19}, // 2
-				{"City Circuit", 19}, // 3
-				{"Vinewood", 21}, // 4
-				{"Freeway (Race)", 23}, // 5
-				{"Into the Country", 27}, // 6
-				{"Badlands A", 31}, // 7
-				{"Badlands B", 33}, // 8
-				{"Dirtbike Danger", 19}, // 9
-				{"Bandito County", 20}, // 10
-				{"Go-Go Karting", 16}, // 11
-				{"San Fierro Fastlane", 16}, // 12
-				{"San Fierro Hills", 41}, // 13
-				{"Country Endurance", 42}, // 14
-				{"SF to LV", 27}, // 15
-				{"Dam Rider", 25}, // 16
-				{"Desert Tricks", 27}, // 17
-				{"LV Ringroad", 21}, // 18
-				{"World War Ace", 35}, // 19
-				{"Barnstorming", 62}, // 20
-				{"Military Service", 70}, // 21
-				{"Chopper Checkpoint", 27}, // 22
-				{"Whirly Bird Waypoint", 27}, // 23
-				{"Heli Hell", 28}, // 24
-				{"8-Track", 8},			// 25
-				{"Dirt Track", 14},		// 26
-			};
-
-			// Deathwarps
-			//===========
-			// Deathwarps. Key = mission passed before the warp. Value = A list of possible
-			// missions after the warp. A list instead of just a single string to be able
-			// to accomodate different routes. Warps will be satisfied if the player dies
-			// while Key is passed but any Value is not. Mission names must be exact.
-			vars.deathWarps = new Dictionary<string, List<string>> {
-				{"Tanker Commander", new List<string> {"Body Harvest"}},
-				{"Body Harvest", new List<string> {"King in Exile"}},
-				{"Jizzy (Cutscene)", new List<string> {"Jizzy"}},
-				{"Jizzy", new List<string> {"Mountain Cloud Boys"}},
-				{"Mike Toreno", new List<string> {"Lure"}},
-				{"Lure", new List<string> {"Paramedic"}},
-				{"The Da Nang Thang", new List<string> {"Yay Ka-Boom-Boom"}},
-
-				{"Boat School", new List<string> {"Yay Ka-Boom-Boom","Taxi Driver"}},
-
-				{"Stretch", new List<string> {"Infernus"}},
-				{"Patriot", new List<string> {"Infernus"}},
-				{"Export List 1", new List<string> {"Rancher"}},
-				{"Comet", new List<string> {"Stafford"}},
-				{"BF Injection", new List<string> {"Shooting Range Complete"}},
-				{"Freeway", new List<string> {"Taxi Driver"}},
-
-				{"Trucking 7", new List<string> {"Madd Dogg"}},
-				{"Dam and Blast", new List<string> {"Quarry"}},
-				{"Up, Up and Away!", new List<string> {"World War Ace"}},
-				{"Barnstorming", new List<string> {"Saint Mark's Bistro"}},
-			};
-
-			vars.bustedWarps = new Dictionary<string, List<string>> {
-				{"Badlands", new List<string> {"Tanker Commander"}},
-				{"King in Exile", new List<string> {"Small Town Bank"}},
-			};
-
 			// Thread Start
 			//=============
 			// Split when a certain thread was started, usually when a mission was started.
@@ -4011,12 +5280,9 @@ startup {
 			vars.startMissions = new Dictionary<string, string> {
 				{"blood", "Blood Ring Started"},
 				{"boat", "Boat School Started"},
-				{"bcrash1", "Badlands Started"},
 				{"bskool", "Bike School Started"},
 				{"catcut", "King in Exile Started"},
-				{"cat4", "Against All Odds Started"},
 				{"desert5", "Pilot School Started"},
-				{"drugs4", "Reuniting The Families Started"},
 				{"dskool", "Driving School Started"},
 				{"freight", "Freight Started"},
 				{"grove2", "Grove 4 Life Started"},
@@ -4024,153 +5290,21 @@ startup {
 				{"gymlv", "Las Venturas Gym Entered"},
 				{"gymsf", "San Fierro Gym Entered"},
 				{"kicksta", "Kickstart Started"},
-				{"la1fin2", "The Green Sabre Started"},
 				{"intro1", "Big Smoke Started"},
 				{"intro2", "Ryder Started"},
 				{"manson5", "Cut Throat Business Started"},
 				{"planes", "Plane Flight"},
 				{"psch", "Verdant Meadows (Airstrip Bought)"},
-				{"ryder3", "Catalyst Started"},
 				{"steal", "Wang Cars (Showroom Bought)"},
-				{"sweet7", "Los Sepulcros Started"},
-				{"truth2", "Are You Going To San Fierro? Started"},
 			};
 
 			// These missions are not directly split when they become active, but need to
 			// be checked anyway so we can use this knowledge for mission specific subsplits
 			vars.startMissions2 = new List<string> {
-				"bcesar4",	// Wu Zi Mu / Farewell My Love
-				"catalin", 	// Catalina Quadrilogy Mission Select Mode
 				"copcar", 	// Vigilante
-				"mtbiker",	// Chilliad Challenge
 				"stunt",	// BMX / NRG Challenge
-				"truck",	// Trucking
 				"music5",	// House Party (Parts 1 & 2)
 				// "valet",	// Valet / 555 We Tip / General being near the valet building
-			};
-
-		#endregion
-
-		#region utility
-
-			//=============================================================================
-			// Settings
-			//=============================================================================
-			// Settings are added manually so the order is guaranteed.
-
-			// Setting Functions
-			//==================
-
-			// Check if the given string is the name of a mission as defined in vars.missionChains
-			Func<string, bool> missionPresent = m => {
-				foreach (var item in vars.missionChains)
-				{
-					foreach (var item2 in item.Value)
-					{
-						if (item2.Value == m)
-						{
-							return true;
-						}
-					}
-				}
-				foreach (var item in vars.individualMissions)
-				{
-					// foreach (var item2 in item.Value)
-					// {
-					// 	if (item2.Value == m)
-					// 	{
-					// 		return true;
-					// 	}
-					// }
-				}
-				vars.DebugOutput("Mission not found: "+m);
-				return false;
-			};
-
-			Func<string, bool> mission4Present = m => {
-				foreach (var item in vars.missions4)
-				{
-					if (item.Value == m)
-					{
-						return true;
-					}
-				}
-				vars.DebugOutput("Mission not found: "+m);
-				return false;
-			};
-
-				// Function to add a list of missions (including check if they are a mission)
-				Action<string, List<string>> addMissionList = (parent, missions) => {
-					foreach (var mission in missions) {
-						if (missionPresent(mission)) {
-							settings.Add(mission, true, mission, parent);
-							settings.Add(mission + "AAA", true, "TEST", mission);
-						}
-					}
-				};
-
-
-			// Add missions from vars.missionChains (also add parent/header)
-			//
-			// header: only label
-			// section: used for parent setting
-			// missions: key for vars.missionChains (address)
-			// defaultTrue: whether enabled by default
-			Action<string, int, string, bool> addMissionsHeader = (section, missions, header, defaultTrue) => {
-				var parent = section+"Missions";
-				settings.Add(parent, true, header);
-				foreach (var item in vars.missionChains[missions]) {
-					var mission = item.Value;
-					if (missionPresent(mission)) {
-						settings.Add(mission, defaultTrue, mission, parent);
-					}
-				}
-			};
-
-			// Add missions from vars.individualMissions (to existing parent)
-			//
-			// missions: existing parent setting, key for vars.individualMissions
-			// defaultValue: default value for all added settings
-			Action<string, bool> addMissions2 = (missions, defaultValue) => {
-				// var parent = missions;
-				// foreach (var item in vars.individualMissions[missions]) {
-				// 	var mission = item.Value;
-				// 	settings.Add(mission, defaultValue, mission, parent);
-				// }
-			};
-
-			Action<int, string> addMissions3 = (missions, handle) => {
-				// var parent = handle;
-				// foreach (var item in vars.missions3[missions]) {
-				// 	var mission = item.Value;
-				// 	settings.Add(mission, false, mission, parent);
-				// }
-			};
-
-			Action<int, string, string> addMissions3Header = (missions, handle, header) => {
-				settings.Add(handle, true, header);
-				addMissions3(missions, handle);
-			};
-
-				// Add a single mission (checking if it's a mission)
-				Action<string, bool, string> addMissionSetting = (mission, defaultValue, label) => {
-					if (missionPresent(mission)) {
-						settings.Add(mission, defaultValue, label);
-					}
-				};
-
-			// Add a single mission (checking if it's a mission)
-			Action<string, bool, string, string> addMission4Custom = (mission, defaultValue, label, parent) => {
-				if (mission4Present(mission)) {
-					settings.Add(mission, defaultValue, label, parent);
-				}
-			};
-
-			// Add a single mission, with default values (checking if it's a mission)
-			Action<string> addMission = (mission) => {
-				if (missionPresent(mission)) {
-					settings.Add(mission);
-				}
 			};
 
 		#endregion
@@ -4179,53 +5313,20 @@ startup {
 
 		return;
 
-		// Los Santos
-		//-----------
-		//-----------
-		//-----------
-
-		addMissionList("LS_Final", new List<string>() { "Reuniting the Families"});
-
-
-		// Los Sepulcros
-		settings.Add("lossep", true, "Los Sepulcros", "LS_Sweet");
-		settings.CurrentDefaultParent = "lossep";
-		settings.Add("Los Sepulcros Started", false, "Mission Started");
-		settings.Add("Los Sepulcros: Intro Cutscene End", false, "Intro cutscene ended");
-		settings.Add("Los Sepulcros: One Homie Recruited", false, "1 homie recruited");
-		settings.Add("Los Sepulcros: Two Homies Recruited", false, "All homies recruited");
-		settings.Add("Los Sepulcros: Homies Entered Car", false, "Sweet's car brakes unlocked");
-		settings.Add("Los Sepulcros: Arrival at the Cemetery", false, "Arrival at the cemetery");
-		settings.Add("Los Sepulcros: Wall Climbed", false, "Wall climbed, waiting for Kane");
-		settings.Add("Los Sepulcros: Kane Arrived", false, "Kane's arrival");
-		settings.Add("Los Sepulcros: Kane Dead", false, "Kane killed");
-		settings.Add("Los Sepulcros: Escape Vehicle Entered", false, "Escape vehicle entered");
-		settings.Add("Los Sepulcros: Arrival at Grove Street", false, "Arrival at Grove Street");
-		addMissionSetting("Los Sepulcros", true, "Mission Passed");
-
-		// The Green Sabre
-		settings.Add("tgs", true, "The Green Sabre", "LS_Final");
-		settings.CurrentDefaultParent = "tgs";
-		settings.Add("The Green Sabre Started", false, "Mission Started");
-		settings.Add("The Green Sabre: End of initial cutscene", false, "End of initial cutscene");
-		settings.Add("The Green Sabre: Entered the Bravura", false, "Entered the Bravura");
-		settings.Add("The Green Sabre: Exiting the Bravura", false, "Exiting the Bravura");
-		settings.Add("The Green Sabre: Arriving at the parking lot", false, "Arriving at the parking lot");
-		settings.Add("The Green Sabre: Parking lot shootout start", false, "Parking lot shootout start");
-		settings.Add("The Green Sabre: Parking lot shootout end", false, "Parking lot shootout end");
-		settings.Add("The Green Sabre: Start of cutscene with Tenpenny", false, "Start of cutscene with Tenpenny");
-		addMissionSetting("The Green Sabre", true, "Mission Passed");
+		// Trash to not throw errors
+		Action<object,object> addMissionList = (a,b) => { };
+		Action<object,object,object> addMissionSetting = (a,b,c) => { };
+		Action<object,object> addMissions2 = (a,b) => { };
+		Action<object,object> addMissions3 = (a,b) => { };
 
 		// Badlands
 		//---------
 		//---------
 		//---------
-		addMissionList("BL_Intro", new List<string>() { });
 		addMissionList("BL_Catalina", new List<string>() {
 			"Tanker Commander", "Small Town Bank",
 			"Local Liquor Store"
 			});
-		// addMissionList("BL_Cesar", new List<string>() { "Wu Zi Mu",	"Farewell, My Love" });
 		addMissionList("BL_Truth", new List<string>() { "Body Harvest" });
 		settings.Add("aygtsf", true, "Are You Going To San Fierro?", "BL_Truth");
 		settings.CurrentDefaultParent = "aygtsf";
@@ -4240,25 +5341,6 @@ startup {
 		settings.Add("AYGTSF: Mothership Entered", false, "Mothership Entered");
 		settings.Add("AYGTSF: Arrival at the Garage", false, "Arrival at the Garage");
 		addMissionSetting("Are You Going To San Fierro?", true, "Mission Passed");
-
-		// Badlands
-		settings.Add("bl", true, "Badlands", "BL_Intro");
-		settings.CurrentDefaultParent = "bl";
-		settings.Add("Badlands Started", false, "Mission Started");
-		settings.Add("Badlands: Mountain Base", false, "Hit Marker at Mountain Base");
-		settings.Add("Badlands: Cabin Reached", false, "Cabin Arrival Cutscene Start");
-		settings.Add("Badlands: Cabin Cutscene", false, "Cabin Arrival Cutscene End");
-		settings.Add("Badlands: Reporter Dead", false, "Reporter Killed");
-		settings.Add("Badlands: Photo Taken", false, "Photo Taken");
-		addMissionSetting("Badlands", true, "Mission Passed");
-
-		// Catalina Quadrilogy
-		settings.Add("catalina quadrilogy", false, "Cutscenes", "BL_Catalina");
-		settings.CurrentDefaultParent = "catalina quadrilogy";
-		settings.Add("First Date Started", false);
-		settings.Add("First Base Started", false);
-		settings.Add("Gone Courting Started", false);
-		settings.Add("Made in Heaven Started", false);
 
 		// Against All Odds
 		settings.Add("aao", true, "Against All Odds", "BL_Catalina");
@@ -4289,15 +5371,6 @@ startup {
 		addMissionSetting("Wu Zi Mu Race Finished", false, "Race Finished");
 		addMissionSetting("Wu Zi Mu Ending Cutscene Started", false, "Ending Cutscene Started");
 		addMissionSetting("Wu Zi Mu", true, "Mission Passed");
-
-		// Farewell, My Love
-		settings.Add("fml", true, "Farewell, My Love", "BL_Cesar");
-		settings.CurrentDefaultParent = "fml";
-		settings.Add("Farewell, My Love Started", false, "Mission Started");
-		addMissionSetting("Farewell, My Love Starting Cutscene Ended", false, "Starting Cutscene Ended");
-		addMissionSetting("Farewell, My Love Race Finished", false, "Race Finished");
-		addMissionSetting("Farewell, My Love Ending Cutscene Started", false, "Ending Cutscene Started");
-		addMissionSetting("Farewell, My Love", true, "Mission Passed");
 
 		// San Fierro
 		//-----------
@@ -4406,23 +5479,6 @@ startup {
 			settings.Add("Missions2", true, "Side Missions");
 			settings.CurrentDefaultParent = "Missions2";
 
-			// Trucking
-			//---------
-			settings.Add("TruckingMissions", true, "Trucking");
-			settings.CurrentDefaultParent = "TruckingMissions";
-			settings.Add("Trucking Start Header", false, "Starting mission for the first time");
-			settings.SetToolTip("Trucking Start Header", "Split when starting a trucking mission for the first time.");
-			settings.Add("Trucking Left Compound Header", false, "Leaving the compound");
-			settings.SetToolTip("Trucking Left Compound Header", "Split when driving the truck out of the compound. Useful for separating truck reset RNG from the actual mission.");
-			for (int i = 1; i <= 8; i++) {
-				settings.Add("Trucking "+i+" Started", false, "Trucking "+i.ToString()+" - Start", "Trucking Start Header");
-				settings.SetToolTip("Trucking "+i+" Started", "Split when starting a trucking mission for the first time.");
-				settings.Add("Trucking "+i+": Left Compound", false, "Trucking "+i.ToString()+" - Leaving compound", "Trucking Left Compound Header");
-				settings.SetToolTip("Trucking "+i+": Left Compound", "Split when driving the truck out of the compound. Useful for separating truck reset RNG from the actual mission.");
-				addMissionSetting("Trucking "+i, true, "Trucking "+i+" Completed");
-			}
-			settings.CurrentDefaultParent = "Missions2";
-
 			// Quarry
 			//-------
 			settings.Add("Quarry Missions", true, "Quarry");
@@ -4512,40 +5568,9 @@ startup {
 			// addMissionSetting("Vigilante", true, "Vigilante level 12 (Completion)");
 			// settings.CurrentDefaultParent = "VehicleSubmissions";
 
-			// Races
-			//------
-			// settings.Add("Races", true, "Races", "Missions2");
-			// settings.CurrentDefaultParent = "Races";
-			// settings.Add("All Races Won", false);
-			// settings.Add("LS Races", true, "Los Santos");
-			// settings.Add("SF Races", true, "San Fierro");
-			// settings.Add("LV Races", true, "Las Venturas");
-			// settings.Add("Air Races", true, "Air Races");
-			// for (int i = 0; i < vars.individualMissions["Streetraces"].Count; i++) {
-				// var raceName = vars.individualMissions["Streetraces"][0x64BD50 + i*4];
-				// var parent = "LS Races";
-				// if (i >= 19) { parent = "Air Races"; }
-				// else if (i >= 15) { parent = "LV Races"; }
-				// else if (i >= 9) { parent = "SF Races"; }
-				// var defaultSplit = i != 0 && i != 7 && i != 8;
-				// var raceId = "Race "+i;
-				// var cpCount = vars.streetrace_checkpointcounts[raceName] - 1;
-				// settings.Add(raceId, defaultSplit, raceName, parent);
-				// settings.CurrentDefaultParent = raceId;
-				// settings.Add(raceId+" Checkpoint 0", false, "Race start (Countdown end)");
-				// for (int cp = 1; cp < cpCount; cp++) {
-				// 	var cpName = raceId+" Checkpoint "+cp;
-				// 	settings.Add(cpName, false, "Checkpoint "+cp);
-				// }
-				// settings.Add(raceId+" Checkpoint "+cpCount, false, "Checkpoint "+cpCount+" (Final)");
-				// settings.SetToolTip(raceId+" Checkpoint "+cpCount, "Split when hitting the final checkpoint. Causes a double split when combined with 'Race Won' setting, but unlike that this will still trigger even if the race has been passed before");
-				// addMissionSetting(raceName, defaultSplit, "Race won");
-			// }
-			// settings.CurrentDefaultParent = null;
-
 			// Stadium Events
 			//---------------
-			// Max lap counts are hardcoded in here & chilliad challenge. Not very future proof, but I don't
+			// Max lap counts are hardcoded in here & ch challenge. Not very future proof, but I don't
 			// expect any SA DLC any time soon
 			settings.Add("Stadium Events", true, "Stadium Events", "Missions2");
 			settings.CurrentDefaultParent = "Stadium Events";
@@ -4611,51 +5636,6 @@ startup {
 				settings.Add("BMX Stunt"+i, false, "Checkpoint "+i);
 			}
 			addMissionSetting("BMX Stunt Challenge", true, "BMX Stunt Challenge Complete");
-
-			// Chilliad Challenge
-			settings.Add("Chilliad Challenge", true, "Chilliad Challenge", "Vehicle Challenges");
-			settings.CurrentDefaultParent = "Chilliad Challenge";
-			settings.Add("Chilliad Challenge #1", true, "Scotch Bonnet Yellow Route");
-			settings.Add("Chilliad Challenge #2", true, "Birdseye Winder");
-			settings.Add("Chilliad Challenge #3", true, "Cobra Run");
-			settings.CurrentDefaultParent = "Chilliad Challenge #1";
-			settings.Add("Chilliad Challenge #1 Started", false, "Countdown Start");
-			settings.Add("Chilliad Challenge #1 Checkpoint 0", false, "Countdown End");
-			for (int cp = 1; cp < 17; cp++) { // 19 32 24
-				var cpName = "Chilliad Challenge #1 Checkpoint "+cp;
-				settings.Add(cpName, false, "Checkpoint "+cp);
-			}
-			settings.Add("Chilliad Challenge #1 Checkpoint 17", false, "Checkpoint 17 (Penultimate)");
-			settings.SetToolTip("Chilliad Challenge #1 Checkpoint 17", "Split when hitting the second-to-last checkpoint.");
-			settings.Add("Chilliad Challenge #1 Complete", true);
-
-			settings.CurrentDefaultParent = "Chilliad Challenge #2";
-			settings.Add("Chilliad Challenge #2 Started", false, "Countdown Start");
-			settings.Add("Chilliad Challenge #2 Checkpoint 0", false, "Countdown End");
-			for (int cp = 1; cp < 30; cp++) { // 19 32 24
-				var cpName = "Chilliad Challenge #2 Checkpoint "+cp;
-				settings.Add(cpName, false, "Checkpoint "+cp);
-			}
-			settings.Add("Chilliad Challenge #2 Checkpoint 30", false, "Checkpoint 30 (Penultimate)");
-			settings.SetToolTip("Chilliad Challenge #2 Checkpoint 30", "Split when hitting the second-to-last checkpoint.");
-			settings.Add("Chilliad Challenge #2 Complete", true);
-
-			settings.CurrentDefaultParent = "Chilliad Challenge #3";
-			settings.Add("Chilliad Challenge #3 Started", false, "Countdown Start");
-			settings.Add("Chilliad Challenge #3 Checkpoint 0", false, "Countdown End");
-			for (int cp = 1; cp <= 11; cp++) { // 19 32 24
-				var cpName = "Chilliad Challenge #3 Checkpoint "+cp;
-				settings.Add(cpName, false, "Checkpoint "+cp);
-			}
-			settings.Add("Chilliad Challenge #3 Checkpoint 12", false, "Checkpoint 12 & 13");
-			settings.SetToolTip("Chilliad Challenge #3 Checkpoint 12", "Checkpoint 13 is bugged and is automatically rewarded upon hitting checkpoint 12.");
-			for (int cp = 14; cp < 22; cp++) { // 19 32 24
-				var cpName = "Chilliad Challenge #3 Checkpoint "+cp;
-				settings.Add(cpName, false, "Checkpoint "+cp);
-			}
-			settings.Add("Chilliad Challenge #3 Checkpoint 22", false, "Checkpoint 22 (Penultimate)");
-			settings.SetToolTip("Chilliad Challenge #3 Checkpoint 22", "Split when hitting the second-to-last checkpoint.");
-			settings.Add("Chilliad Challenge #3 Complete", true);
 
 			// NRG Challenge
 			settings.Add("NRG Stunt Challenge (Header)", true, "NRG-500 Stunt Challenge", "Vehicle Challenges");
@@ -4778,33 +5758,6 @@ startup {
 
 		#endregion
 
-		#region Warps
-
-			// Death & Busted Warps
-			//=====================
-			settings.Add("Warps", false, "Death & Busted Warps");
-			settings.Add("BustedWarps", false, "Busted Warps", "Warps");
-			settings.Add("DeathWarps", false, "Death Warps", "Warps");
-			settings.CurrentDefaultParent = "BustedWarps";
-			foreach (var item in vars.bustedWarps) {
-				foreach (var item2 in item.Value) {
-					var warpName = "BW '" + item.Key + "' to '" + item2 + "'";
-					settings.Add(warpName, false);
-					settings.SetToolTip(warpName, "Split when getting busted while "+item.Key+" is completed but "+item2+" is not.");
-				}
-			}
-			settings.CurrentDefaultParent = "DeathWarps";
-			foreach (var item in vars.deathWarps) {
-				foreach (var item2 in item.Value) {
-					var warpName = "DW '" + item.Key + "' to '" + item2 + "'";
-					settings.Add(warpName, false);
-					settings.SetToolTip(warpName, "Split when getting wasted while "+item.Key+" is completed but "+item2+" is not.");
-				}
-			}
-			settings.CurrentDefaultParent = null;
-
-		#endregion
-
 		#region Other
 
 			// Other
@@ -4891,11 +5844,12 @@ init {
 		var versionValue = 38079;
 		int versionOffset = 0;
 
-		int playingTimeAddr = 	0x77CB84;
-		int threadAddr =		0x68B42C;
-		int missionTextAddr =	0x7AAD40;
-		int loadingAddr =		0x7A67A5;
-		int playerPedAddr =		0x77CD98;
+		int playingTimeAddr = 		0x77CB84;
+		int threadAddr =			0x68B42C;
+		int missionTextAddr =		0x7AAD40;
+		int oddMissionTextAddr = 	0x7AAEC0;
+		int loadingAddr =			0x7A67A5;
+		int wantedLevelAddr =		0x7AA420;
 
 		var scmGlobVarOffset = 			0x649960;
 		var scmMissionLocalVarOffset = 	0x648960;
@@ -4908,7 +5862,7 @@ init {
 		// Checking the memory value doesn't seem to work if the
 		// game is still checking the CD.
 		//
-		// The memory values and associated versions/offsets where taken from the
+		// The memory values and associated versions/offsets were taken from the
 		// AHK Autosplitter and checked and extended as possible.
 
 		int moduleSize = modules.First().ModuleMemorySize;
@@ -4947,11 +5901,6 @@ init {
 			// This version is no longer supported
 			versionOffset = 0x77970;
 			version = "Steam";
-			playingTimeAddr = 0x80FD74;
-			threadAddr =	0x702D98;
-			missionTextAddr = 0x7AAD40; // Not correct, didn't look it up
-			loadingAddr =	0x833995;
-			playerPedAddr =	0x8100D0;
 		}
 
 		// Version detected
@@ -4974,36 +5923,92 @@ init {
 		playingTimeAddr += offset;
 		threadAddr += offset;
 		missionTextAddr += offset;
+		oddMissionTextAddr += offset;
 		loadingAddr += offset;
-		playerPedAddr += offset;
 		scmGlobVarOffset += offset;
 		scmMissionLocalVarOffset += offset;
+		wantedLevelAddr += offset;
 	#endregion
 
-	//=============================================================================
-	// Memory Watcher
-	//=============================================================================
-	var baseModule = modules.First();
+	#region Memory Address Watching
 
-	// Scan for an unknown address
-	Func<string, int> ScanForAddress = targetStr => {
-		var scanner = new SignatureScanner(game, baseModule.BaseAddress, baseModule.ModuleMemorySize);
-		var target = new SigScanTarget(targetStr);
-		int address = (int)scanner.Scan(target);
-		return address -= (int)baseModule.BaseAddress;
-	};
-	vars.ScanForAddress = ScanForAddress;
+		//=============================================================================
+		// Memory Watcher
+		//=============================================================================
+		var baseModule = modules.First();
 
-	// Change watchers if an address is marked as changed
-	Action ChangeAddressWatchers = () => {
-		foreach (var tuple in vars.nonScmAddressesChanges) {
+		// Scan for an unknown address
+		Func<string, int> ScanForAddress = targetStr => {
+			var scanner = new SignatureScanner(game, baseModule.BaseAddress, baseModule.ModuleMemorySize);
+			var target = new SigScanTarget(targetStr);
+			int address = (int)scanner.Scan(target);
+			return address -= (int)baseModule.BaseAddress;
+		};
+		vars.ScanForAddress = ScanForAddress;
 
+		// Change watchers if an address is marked as changed
+		Action ChangeAddressWatchers = () => {
+			foreach (var tuple in vars.nonScmAddressesChanges) {
+
+				string tupleName = tuple.Item1;
+				int tupleType = tuple.Item2;
+				int tupleAddress = tuple.Item3;
+				//vars.DebugOutput("Changing Watcher (chng): " + tupleName + " 0x" + tupleAddress.ToString());
+
+				vars.watcherList.Remove(vars.GetWatcher(tupleName));
+				switch (tupleType) {
+					case 1:
+						vars.watcherList.Add(
+							new MemoryWatcher<byte>(
+								new DeepPointer(tupleAddress+offset)
+							) { Name = tupleName }
+						);
+						break;
+					case 2:
+						vars.watcherList.Add(
+							new MemoryWatcher<short>(
+								new DeepPointer(tupleAddress+offset)
+							) { Name = tupleName }
+						);
+						break;
+					case 4:
+					default:
+						vars.watcherList.Add(
+							new MemoryWatcher<int>(
+								new DeepPointer(tupleAddress+offset)
+							) { Name = tupleName }
+						);
+						break;
+				}
+			}
+			vars.nonScmAddressesChanges.Clear();
+		};
+		vars.ChangeAddressWatchers = ChangeAddressWatchers;
+
+		// Create MemoryWatcherList
+		vars.watcherList = new MemoryWatcherList();
+		vars.currentWatchers = new HashSet<string>();
+		vars.DebugOutput("Watcher List Cleared");
+
+		vars.AddNonScmAddressWatcher(playingTimeAddr, "playingTime", 4);
+		vars.AddNonScmAddressWatcher(wantedLevelAddr, "wantedLevel", 4);
+
+		vars.AddPointerWatcher(new DeepPointer(0x77CD98, 0x530), "pedStatus", 1);
+		vars.AddPointerWatcher(new DeepPointer(0x77CD98, 0x5BC), "weaponSlotMelee", 1);
+
+		vars.DebugOutput("Adding String Pointer Watcher (strn): thread");
+		vars.DebugOutput("Adding String Pointer Watcher (strn): missionStartText");
+		vars.watcherList.Add(new StringWatcher(new DeepPointer(threadAddr, 0x8), 10) { Name = "thread" });
+		vars.watcherList.Add(new StringWatcher(new DeepPointer(missionTextAddr), 32) { Name = "missionStartText" });
+		vars.watcherList.Add(new StringWatcher(new DeepPointer(oddMissionTextAddr), 32) { Name = "oddMissionStartText" });
+
+		// Add other non-SCM addresses (eg stats entries) as added in startup()
+		foreach (var tuple in vars.nonScmAddresses) {
 			string tupleName = tuple.Item1;
 			int tupleType = tuple.Item2;
 			int tupleAddress = tuple.Item3;
-			//vars.DebugOutput("Changing Watcher (chng): " + tupleName + " 0x" + tupleAddress.ToString());
+			vars.DebugOutput("Adding Watcher (misc): " + tupleName + " 0x" + tupleAddress.ToString("x"));
 
-			vars.watcherList.Remove(vars.GetWatcher(tupleName));
 			switch (tupleType) {
 				case 1:
 					vars.watcherList.Add(
@@ -5029,184 +6034,135 @@ init {
 					break;
 			}
 		}
-		vars.nonScmAddressesChanges.Clear();
-	};
-	vars.ChangeAddressWatchers = ChangeAddressWatchers;
+		// Add pointers as added in startup()
+		foreach (var tuple in vars.pointerList) {
+			string tupleName = tuple.Item1;
+			int tupleType = tuple.Item2;
+			DeepPointer tuplePointer = tuple.Item3;
+			vars.DebugOutput("Adding Pointer Watcher (pntr): " + tupleName);
 
-	// Create MemoryWatcherList
-	vars.watcherList = new MemoryWatcherList();
-	vars.currentWatchers = new HashSet<string>();
-	vars.DebugOutput("Watcher List Cleared");
-
-	// Add some very basic addresses
-	vars.watchScmGlobalVariables.Add(43, "interior");			// $ACTIVE_INTERIOR
-	vars.watchScmGlobalVariables.Add(24, "intro_passed");		// $MISSION_INTRO_PASSED
-
-	vars.AddNonScmAddressWatcher(playingTimeAddr, "playingTime", 4);
-	vars.DebugOutput("Adding String Pointer Watcher (strn): thread");
-	vars.watcherList.Add(new StringWatcher(new DeepPointer(threadAddr, 0x8), 10) { Name = "thread" });
-	vars.watcherList.Add(new StringWatcher(new DeepPointer(missionTextAddr), 16) { Name = "missionStartText" });
-
-	// Add other non-SCM addresses (eg stats entries) as added in startup()
-	foreach (var tuple in vars.nonScmAddresses) {
-		string tupleName = tuple.Item1;
-		int tupleType = tuple.Item2;
-		int tupleAddress = tuple.Item3;
-		vars.DebugOutput("Adding Watcher (misc): " + tupleName + " 0x" + tupleAddress.ToString("x"));
-
-		switch (tupleType) {
-			case 1:
-				vars.watcherList.Add(
-					new MemoryWatcher<byte>(
-						new DeepPointer(tupleAddress+offset)
-					) { Name = tupleName }
-				);
-				break;
-			case 2:
-				vars.watcherList.Add(
-					new MemoryWatcher<short>(
-						new DeepPointer(tupleAddress+offset)
-					) { Name = tupleName }
-				);
-				break;
-			case 4:
-			default:
-				vars.watcherList.Add(
-					new MemoryWatcher<int>(
-						new DeepPointer(tupleAddress+offset)
-					) { Name = tupleName }
-				);
-				break;
+			switch (tupleType) {
+				case 1:
+					vars.watcherList.Add(
+						new MemoryWatcher<byte>(tuplePointer) { Name = tupleName }
+					);
+					break;
+				case 2:
+					vars.watcherList.Add(
+						new MemoryWatcher<short>(tuplePointer) { Name = tupleName }
+					);
+					break;
+				case 4:
+				default:
+					vars.watcherList.Add(
+						new MemoryWatcher<int>(tuplePointer) { Name = tupleName }
+					);
+					break;
+			}
 		}
-	}
-	// Add pointers as added in startup()
-	foreach (var tuple in vars.pointerList) {
-		string tupleName = tuple.Item1;
-		int tupleType = tuple.Item2;
-		DeepPointer tuplePointer = tuple.Item3;
-		vars.DebugOutput("Adding Pointer Watcher (pntr): " + tupleName);
+		// Add all the SCM global var watchers ($xxxx)
+		// Formula: 0x649960 + v * 0x4
+		// as added in startup()
+		foreach (var item in vars.watchScmGlobalVariables) {
+			var address = item.Key*4+scmGlobVarOffset+offset;
+			vars.DebugOutput("Adding watcher (scmG): 0x" + address.ToString("x") + " $" + item.Key.ToString() + " " + item.Value);
+			vars.watcherList.Add(
+				new MemoryWatcher<int>(
+					new DeepPointer(address)
+				) { Name = item.Value.ToString() }
+			);
+		}
+		// Add all the SCM mission local var watchers (xx@)
+		// All mission local variables are actually global. Located at
+		// Formula: 0xA48960 + v * 0x4
+		// as added in startup()
+		foreach (var item in vars.watchScmMissionLocalVariables) {
+			var address = item*4+scmMissionLocalVarOffset+offset;
+			vars.DebugOutput("Adding watcher (scmL): 0x" + address.ToString("x") + " ScmLocal @" + item);
+			vars.watcherList.Add(
+				new MemoryWatcher<int>(
+					new DeepPointer(address)
+				) { Name = item.ToString() + "@" }
+			);
+		}
 
-		switch (tupleType) {
-			case 1:
-				vars.watcherList.Add(
-					new MemoryWatcher<byte>(tuplePointer) { Name = tupleName }
-				);
-				break;
-			case 2:
-				vars.watcherList.Add(
-					new MemoryWatcher<short>(tuplePointer) { Name = tupleName }
-				);
-				break;
-			case 4:
-			default:
-				vars.watcherList.Add(
-					new MemoryWatcher<int>(tuplePointer) { Name = tupleName }
-				);
-				break;
-		}
-	}
-	// Add all the SCM global var watchers ($xxxx)
-	// Formula: 0x649960 + v * 0x4
-	// as added in startup()
-	foreach (var item in vars.watchScmGlobalVariables) {
-		var address = item.Key*4+scmGlobVarOffset+offset;
-		vars.DebugOutput("Adding watcher (scmG): 0x" + address.ToString("x") + " $" + item.Key.ToString() + " " + item.Value);
-		vars.watcherList.Add(
-			new MemoryWatcher<int>(
-				new DeepPointer(address)
-			) { Name = item.Value.ToString() }
-		);
-	}
-	// Add all the SCM mission local var watchers (xx@)
-	// All mission local variables are actually global. Located at
-	// Formula: 0xA48960 + v * 0x4
-	// as added in startup()
-	foreach (var item in vars.watchScmMissionLocalVariables) {
-		var address = item*4+scmMissionLocalVarOffset+offset;
-		vars.DebugOutput("Adding watcher (scmL): 0x" + address.ToString("x") + " ScmLocal @" + item);
-		vars.watcherList.Add(
-			new MemoryWatcher<int>(
-				new DeepPointer(address)
-			) { Name = item.ToString() + "@" }
-		);
-	}
+	#endregion
 
-	//=============================================================================
-	// Utility functions
-	//=============================================================================
-
-	// Check if splitting should occur based on whether
-	// * The split has already been split before (eg. before loading a save)
-	// * The split is disabled in settings
-	// * Double split prevention cooldown is active
-	//
-	// Also stores the split to the list of already split splits. If a split
-	// should occur, it is added to a queue, so splits that happen simultaneously
-	// both get split subsequently. This is kind of the opposite of double split
-	// prevention, rather it ensures multiple splits where applicable.
-	Func<string, bool> TrySplit = (splitId) => {
-		if (vars.completedSplits.Contains(splitId)) {
-			vars.DebugOutput("Split Prevented (Already Done): "+splitId);
-			return false;
-		}
-		// Add split to already split splits list so they won't get split again, even if the split
-		// is blocked by a cooldown or disabled setting.
-		vars.completedSplits.Add(splitId);
-
-		if (!settings[splitId]) {
-			vars.DebugOutput("Split Prevented (Disabled in Settings): "+splitId);
-			return false;
-		}
-		// 2500 = magic number. It was chosen as it was large enough to prevent double splitting on
-		// dupes, but small enough to allow short splits like a deathwarp after certain missions to
-		// go through. However, dupes are handled differently now, so this functionality is mostly
-		// obsolete. The option remains should the user wish to use it though. This will prevent
-		// short subsequent or simultaneous splits like splitting on mission start as well as on
-		// entering its starting marker.
-		if (settings["doubleSplitPrevention"] && Environment.TickCount - vars.lastSplit > 2500) {
-			vars.DebugOutput("Split Prevented (Cooldown): "+splitId);
-			return false;
-		}
-		// Add split to a queue, so splits that happen simultaneously both get split subsequently.
-		// This is kind of the opposite of double split prevention, rather it ensures multiple splits
-		// where applicable.
-		vars.DebugOutput("Split: "+splitId);
-		vars.lastSplit = Environment.TickCount;
-		vars.splitQueue.Enqueue(splitId);
-		return true;
-	};
-	vars.TrySplit = TrySplit;
-
-	// Function that's done when checking subsplits for each mission
-	// Checks if the mission is or was recently active
-	// Then checks if the mission has been passed, and splits if so
-	// If the mission is both active and not passed, returns true
-	// Also checks if the mission is enabled in the settings to begin with
-	Func<string, string, int, int, string, string, bool> ValidateMissionProgress = (thread, chain, currentIndex, passIndex, split, setting) => {
-		if (!settings[setting]) {
-			return false;
-		}
-		if (vars.lastStartedMission != thread) {
-			return false;
-		}
-		var mission_chain = vars.GetWatcher(chain);
-		if (mission_chain.Current >= passIndex) {
-			if (mission_chain.Changed && mission_chain.Old == currentIndex) {
-				vars.TrySplit(split);
+	#region Utility functions
+		// Check if splitting should occur based on whether
+		// * The split has already been split before (eg. before loading a save)
+		// * The split is disabled in settings
+		// * Double split prevention cooldown is active
+		//
+		// Also stores the split to the list of already split splits. If a split
+		// should occur, it is added to a queue, so splits that happen simultaneously
+		// both get split subsequently. This is kind of the opposite of double split
+		// prevention, rather it ensures multiple splits where applicable.
+		Func<string, bool> TrySplit = (splitId) => {
+			if (vars.completedSplits.Contains(splitId)) {
+				vars.DebugOutput("Split Prevented (Already Done): "+splitId);
 				return false;
 			}
-			return false;
-		}
-		return true;
-	};
-	vars.ValidateMissionProgress = ValidateMissionProgress;
+			// Add split to already split splits list so they won't get split again, even if the split
+			// is blocked by a cooldown or disabled setting.
+			vars.completedSplits.Add(splitId);
 
-	// Check if a setting is enabled. Have to do it like this because checking directly in the 
-	// startup Funcs throws an error
-	Func<string, bool> CheckSetting = (name) => {
-		return settings[name];
-	};
-	vars.CheckSetting = CheckSetting;
+			if (!settings[splitId]) {
+				vars.DebugOutput("Split Prevented (Disabled in Settings): "+splitId);
+				return false;
+			}
+			// 2500 = magic number. It was chosen as it was large enough to prevent double splitting on
+			// dupes, but small enough to allow short splits like a deathwarp after certain missions to
+			// go through. However, dupes are handled differently now, so this functionality is mostly
+			// obsolete. The option remains should the user wish to use it though. This will prevent
+			// short subsequent or simultaneous splits like splitting on mission start as well as on
+			// entering its starting marker.
+			if (settings["doubleSplitPrevention"] && Environment.TickCount - vars.lastSplit > 2500) {
+				vars.DebugOutput("Split Prevented (Cooldown): "+splitId);
+				return false;
+			}
+			// Add split to a queue, so splits that happen simultaneously both get split subsequently.
+			// This is kind of the opposite of double split prevention, rather it ensures multiple splits
+			// where applicable.
+			vars.DebugOutput("Split: "+splitId);
+			vars.lastSplit = Environment.TickCount;
+			vars.splitQueue.Enqueue(splitId);
+			return true;
+		};
+		vars.TrySplit = TrySplit;
+
+		// Function that's done when checking subsplits for each mission
+		// Checks if the mission is or was recently active
+		// Then checks if the mission has been passed, and splits if so
+		// If the mission is both active and not passed, returns true
+		// Also checks if the mission is enabled in the settings to begin with
+		Func<string, string, int, int, string, string, bool> ValidateMissionProgress = (thread, chain, currentIndex, passIndex, split, setting) => {
+			if (!settings[setting]) {
+				return false;
+			}
+			if (vars.lastStartedMission != thread) {
+				return false;
+			}
+			var mission_chain = vars.GetWatcher(chain);
+			if (mission_chain.Current >= passIndex) {
+				if (mission_chain.Changed && mission_chain.Old == currentIndex) {
+					vars.TrySplit(split);
+					return false;
+				}
+				return false;
+			}
+			return true;
+		};
+		vars.ValidateMissionProgress = ValidateMissionProgress;
+
+		// Check if a setting is enabled. Have to do it like this because checking directly in the 
+		// startup Funcs throws an error
+		Func<string, bool> CheckSetting = (name) => {
+			return settings[name];
+		};
+		vars.CheckSetting = CheckSetting;
+
+	#endregion
 
 	return;
 
@@ -5241,12 +6197,6 @@ init {
 
 	// Add global variables for mid-mission events
 	vars.watcherList.Add(new MemoryWatcher<int>(new DeepPointer(6592864 + (802 * 4)+offset)) { Name = "100%_achieved" }); // $_100_PERCENT_COMPLETE
-	vars.watcherList.Add(new MemoryWatcher<int>(new DeepPointer(6592864 + (7011 * 4)+offset)) { Name = "aygtsf_plantsremaining" });
-	vars.watcherList.Add(new MemoryWatcher<int>(new DeepPointer(6592864 + (2208 * 4)+offset)) { Name = "bl_cabinreached" });	// Trip Skip enabled
-	vars.watcherList.Add(new MemoryWatcher<int>(new DeepPointer(6592864 + (6965 * 4)+offset)) { Name = "bl_stage" });
-	vars.watcherList.Add(new MemoryWatcher<int>(new DeepPointer(6592864 + (64 * 4)+offset)) { Name = "catalina_count" }); // CATALINA_TOTAL_PASSED_MISSIONS
-	vars.watcherList.Add(new MemoryWatcher<int>(new DeepPointer(6592864 + (1799 * 4)+offset)) { Name = "chilliad_race" });
-	vars.watcherList.Add(new MemoryWatcher<int>(new DeepPointer(6592864 + (1801 * 4)+offset)) { Name = "chilliad_done" }); // $MISSION_CHILIAD_CHALLENGE_PASSED
 	vars.watcherList.Add(new MemoryWatcher<int>(new DeepPointer(6592864 + (8014 * 4)+offset)) { Name = "eotlp3_chase" });
 	vars.watcherList.Add(new MemoryWatcher<int>(new DeepPointer(6592864 + (359 * 4)+offset)) { Name = "gf_denise_progress" }); // $GIRL_PROGRESS[0]
 	vars.watcherList.Add(new MemoryWatcher<int>(new DeepPointer(6592864 + (360 * 4)+offset)) { Name = "gf_michelle_progress" }); // $GIRL_PROGRESS[1]
@@ -5274,19 +6224,15 @@ init {
 	vars.watcherList.Add(new MemoryWatcher<int>(new DeepPointer(0x648A40+offset)) { Name = "g4l_drivetoidlewood" }); // 56@
 	vars.watcherList.Add(new MemoryWatcher<int>(new DeepPointer(0x648A48+offset)) { Name = "g4l_territory1" }); // 58@
 	vars.watcherList.Add(new MemoryWatcher<int>(new DeepPointer(0x648A4C+offset)) { Name = "stunt_checkpoint" }); //59@
-	vars.watcherList.Add(new MemoryWatcher<int>(new DeepPointer(0x648ABC+offset)) { Name = "aygtsf_progress" }); //87@
 	vars.watcherList.Add(new MemoryWatcher<int>(new DeepPointer(0x648AC8+offset)) { Name = "aao_finalmarker" }); //90@
 	vars.watcherList.Add(new MemoryWatcher<int>(new DeepPointer(0x648AE8+offset)) { Name = "aao_storeleft" }); //98@
 	vars.watcherList.Add(new MemoryWatcher<int>(new DeepPointer(0x648AF0+offset)) { Name = "tgs_chapter" }); //100@
-	vars.watcherList.Add(new MemoryWatcher<int>(new DeepPointer(0x648B08+offset)) { Name = "trucking_leftcompound" });
 	vars.watcherList.Add(new MemoryWatcher<int>(new DeepPointer(0x648B10+offset)) { Name = "aao_angryshouts" }); //108@
 	vars.watcherList.Add(new MemoryWatcher<int>(new DeepPointer(0x648B68+offset)) { Name = "freight_stations" });
 	vars.watcherList.Add(new MemoryWatcher<int>(new DeepPointer(0x648BBC+offset)) { Name = "aygtsf_dialogue" }); //151@
 	vars.watcherList.Add(new MemoryWatcher<int>(new DeepPointer(0x648D74+offset)) { Name = "lossep_homiesrecruited" });
 	vars.watcherList.Add(new MemoryWatcher<int>(new DeepPointer(0x648DD8+offset)) { Name = "lossep_cardoorsunlocked" });
 	vars.watcherList.Add(new MemoryWatcher<int>(new DeepPointer(0x6491B8+offset)) { Name = "lossep_dialogue" });
-	vars.watcherList.Add(new MemoryWatcher<int>(new DeepPointer(0x64950C+offset)) { Name = "chilliad_checkpoints3" });
-	vars.watcherList.Add(new MemoryWatcher<int>(new DeepPointer(0x649518+offset)) { Name = "chilliad_checkpoints" });
 
 	// Things
     vars.watcherList.Add(new MemoryWatcher<int>(new DeepPointer(0x7791D0+offset)) { Name = "gang_territories" });
@@ -5299,9 +6245,6 @@ init {
 
 	// This means loading from a save and such, not load screens
 	vars.watcherList.Add(new MemoryWatcher<bool>(new DeepPointer(loadingAddr)) { Name = "loading" });
-
-	// Other values
-	vars.watcherList.Add(new MemoryWatcher<int>(new DeepPointer(playerPedAddr, 0x530)) { Name = "pedStatus" });
 
 	// Export Lists
 	//=============
@@ -5526,78 +6469,6 @@ split {
 			if (aygtsf_dialogue.Current == 8 && aygtsf_dialogue.Old != 8) {
 				vars.TrySplit("AYGTSF: Rocket Launcher");
 			}
-			var aygtsf_progress = vars.GetWatcher("aygtsf_progress");
-			if (aygtsf_progress.Current == 2 && aygtsf_progress.Old < 2) {
-				vars.TrySplit("AYGTSF: Helicopter Destroyed");
-			}
-			if (aygtsf_progress.Current == 3 && aygtsf_progress.Old == 2) {
-				vars.TrySplit("AYGTSF: Mothership Entered");
-			}
-			if (aygtsf_progress.Current == 5 && aygtsf_progress.Old < 5) {
-				vars.TrySplit("AYGTSF: Arrival at the Garage");
-			}
-		}
-	#endregion
-	#region Badlands
-		// =============
-		// bl_stage
-		// -1: mission start
-		// 0: mountain base marker reached
-		// bl_cabinreached set to 1 at start of cabin cutscene
-		// 1: cabin cutscene finished
-		// 2: ?
-		// 3: reporter fleeing to car / car driving away cutscene
-		// 4: car chase
-		// 5: car on fire, reporter fleeing
-		// 6: car exploded, reporter still alive
-		// 7: reporter dead
-		// 8: photograph taken, return
-		if (vars.lastStartedMission == "bcrash1") {
-			var badlands_progress = vars.GetWatcher("bl_stage");
-			var badlands_tripskip = vars.GetWatcher("bl_cabinreached");
-			if (badlands_tripskip.Current == 1 && badlands_tripskip.Old == 0) {
-				vars.TrySplit("Badlands: Cabin Reached");
-			}
-			if (badlands_progress.Current == 0 && badlands_progress.Old == -1) { vars.TrySplit("Badlands: Mountain Base"); }
-			if (badlands_progress.Current == 1 && badlands_progress.Old == 0) { vars.TrySplit("Badlands: Cabin Cutscene"); }
-			if (badlands_progress.Current == 7 && badlands_progress.Old <= 6) { vars.TrySplit("Badlands: Reporter Dead"); }
-			if (badlands_progress.Current == 8 && badlands_progress.Old == 7) { vars.TrySplit("Badlands: Photo Taken"); }
-		}
-	#endregion
-	#region Catalina Quadrilogy
-		if (thread.Changed && thread.Current == "catalin") {
-			var catalina_count = vars.GetWatcher("catalina_count");
-			if (catalina_count.Current == 0) { vars.TrySplit("First Date Started");}
-			else if (catalina_count.Current == 1) { vars.TrySplit("First Base Started");}
-			else if (catalina_count.Current == 2) { vars.TrySplit("Gone Courting Started");}
-			else if (catalina_count.Current == 3) { vars.TrySplit("Made in Heaven Started");}
-		}
-	#endregion
-	#region Chilliad Challenge
-		//==================
-		// "chilliad_race" contains the next race to be started (1-3), but also repeats
-		// when you do the races again (changes to 1 on finishing the last race).
-		// "chilliad_done" changes from 0 to 1 when all races have been done.
-		// current race gets set before current checkpoint. This causes a glitch where finishing race 1 will also trigger CP 18 of race 2.
-		// Using else if instead of just if seems to remedy this.
-		var chilliad_race = vars.GetWatcher("chilliad_race");
-		if (thread.Changed && thread.Current == "mtbiker") {
-			vars.TrySplit("Chilliad Challenge #"+chilliad_race.Current+" Started");
-		}
-		var chilliad_checkpoints = vars.GetWatcher("chilliad_checkpoints");
-		var chilliad_checkpoints3 = vars.GetWatcher("chilliad_checkpoints3");
-		if (chilliad_race.Current != chilliad_race.Old) {
-			vars.TrySplit("Chilliad Challenge #"+chilliad_race.Old+" Complete");
-		}
-		else if (chilliad_checkpoints.Current > chilliad_checkpoints.Old) {
-			if (vars.lastStartedMission == "mtbiker" && chilliad_race.Current != 3) {
-				vars.TrySplit("Chilliad Challenge #"+chilliad_race.Current+" Checkpoint "+chilliad_checkpoints.Old);
-			}
-		}
-		else if (chilliad_checkpoints3.Current > chilliad_checkpoints3.Old) {
-			if (vars.lastStartedMission == "mtbiker" && chilliad_race.Current == 3) {
-				vars.TrySplit("Chilliad Challenge #"+chilliad_race.Current+" Checkpoint "+chilliad_checkpoints3.Old);
-			}
 		}
 	#endregion
 	#region Courier
@@ -5800,16 +6671,16 @@ split {
 			var lossep_cardoorsunlocked = vars.GetWatcher("lossep_cardoorsunlocked");
 			var lossep_dialogue = vars.GetWatcher("lossep_dialogue");
 			if (lossep_homiesrecruited.Old == 0 && lossep_homiesrecruited.Current == 1) {
-				vars.TrySplit("Los Sepulcros: One Homie Recruited");
+				// vars.TrySplit("Los Sepulcros: One Homie Recruited");
 			}
 			if (lossep_cardoorsunlocked.Old == 0 && lossep_cardoorsunlocked.Current == 1) {
-				vars.TrySplit("Los Sepulcros: Two Homies Recruited");
+				// vars.TrySplit("Los Sepulcros: Two Homies Recruited");
 			}
 			if (lossep_dialogue.Old != 1 && lossep_dialogue.Current == 1) {
-				vars.TrySplit("Los Sepulcros: Intro Cutscene End");
+				// vars.TrySplit("Los Sepulcros: Intro Cutscene End");
 			}
 			if (lossep_dialogue.Old != 23 && lossep_dialogue.Current == 23) {
-				vars.TrySplit("Los Sepulcros: Homies Entered Car");
+				// vars.TrySplit("Los Sepulcros: Homies Entered Car");
 			}
 			if (lossep_dialogue.Old != 29 && lossep_dialogue.Current == 29) {
 				vars.TrySplit("Los Sepulcros: Arrival at the Cemetery");
@@ -5939,63 +6810,6 @@ split {
 			}
 		}
 	#endregion
-	#region The Green Sabre
-		// ====================
-		// 1 = Initial cutscene
-		// 2 = Cesar's phone call
-		// 3 = Entered Bravura
-		// 4 = Exiting Bravura
-		// 5 = Sweet Dying Cutscene
-		// 6 = Combat
-		// 7 = Cops arrive at the parking lot
-		// 8 = You got a bag over your head boy
-		var tgs_chapter = vars.GetWatcher("tgs_chapter");
-		if (tgs_chapter.Current > tgs_chapter.Old) {
-			if (vars.lastStartedMission == "la1fin2" && !vars.Passed("The Green Sabre")) {
-				switch ((int)tgs_chapter.Current) {
-					case 2:
-						vars.TrySplit("The Green Sabre: End of initial cutscene");
-						break;
-					case 3:
-						vars.TrySplit("The Green Sabre: Entered the Bravura");
-						break;
-					case 4:
-						vars.TrySplit("The Green Sabre: Exiting the Bravura");
-						break;
-					case 5:
-						vars.TrySplit("The Green Sabre: Arriving at the parking lot");
-						break;
-					case 6:
-						vars.TrySplit("The Green Sabre: Parking lot shootout start");
-						break;
-					case 7:
-						vars.TrySplit("The Green Sabre: Parking lot shootout end");
-						break;
-					case 8:
-						vars.TrySplit("The Green Sabre: Start of cutscene with Tenpenny");
-						break;
-					default:
-						break;
-				}
-			}
-		}
-	#endregion
-	#region Trucking
-		//=========
-		// Start & Leaving the compound
-		// var trucking_current = vars.GetWatcher(0x6518DC.ToString()].Current + 1;
-		// if (thread.Changed && thread.Current == "truck") {
-		// 	var splitName = "Trucking "+trucking_current+" Started";
-		// 	vars.TrySplit(splitName);
-		// }
-		// else if (vars.lastStartedMission == "truck") {
-		// 	var trucking_leftcompound = vars.GetWatcher("trucking_leftcompound");
-		// 	if (trucking_leftcompound.Current > trucking_leftcompound.Old) {
-		// 		var splitName = "Trucking "+trucking_current+": Left Compound";
-		// 		vars.TrySplit(splitName);
-		// 	}
-		// }
-	#endregion
 	#region Valet Parking
 		//===================
 		// Levels
@@ -6033,16 +6847,7 @@ split {
 			}
 		// }
 	#endregion
-	#region Wu Zi Mu / Farewell, My Love
-		//=================================
-		if (thread.Changed && thread.Current == "bcesar4" && !vars.Passed("Wu Zi Mu")) {
-			vars.TrySplit("Wu Zi Mu Started");
-		}
-		if (race_index.Current == 8 && race_index.Old == 7 && !vars.Passed("Farewell, My Love")) {
-			// If parking in the marker and starting FML during the fadein of WZM, currentthread will never change, so we have to detect its start like this
-			vars.TrySplit("Farewell, My Love Started");
-		}
-	#endregion
+
 	#region Vigilante
 		//===============
 		if (thread.Changed && thread.Current == "copcar") {
@@ -6103,37 +6908,6 @@ split {
 			else if ((gf_unlockedCurrent & 32) != 0 && (gf_unlockedOld & 32) == 0) { vars.TrySplit("gf_millie_unlocked"); }
 		}
 
-		// Busted/Deathwarp
-		//=================
-		var pedStatus = vars.GetWatcher("pedStatus");
-		if (pedStatus.Current != pedStatus.Old) {
-			if (pedStatus.Current == 63) // Busted
-			{
-				foreach (var item in vars.bustedWarps) {
-					if (vars.Passed(item.Key)) {
-						foreach (var item2 in item.Value) {
-							if (!vars.Passed(item2)) {
-								vars.TrySplit("BW '" + item.Key + "' to '" + item2 + "'");
-								break;
-							}
-						}
-					}
-				}
-			}
-			if (pedStatus.Current == 55) // Wasted
-			{
-				foreach (var item in vars.deathWarps) {
-					if (vars.Passed(item.Key)) {
-						foreach (var item2 in item.Value) {
-							if (!vars.Passed(item2)) {
-								vars.TrySplit("DW '" + item.Key + "' to '" + item2 + "'");
-								break;
-							}
-						}
-					}
-				}
-			}
-		}
 	#endregion
 
 	// Skip splits
